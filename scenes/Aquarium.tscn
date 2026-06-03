@@ -1,0 +1,128 @@
+[gd_scene load_steps=3 format=3 uid="uid://aquarium_main"]
+
+[ext_resource type="Script" path="res://scripts/AquariumController.gd" id="1_controller"]
+[ext_resource type="Script" path="res://scripts/ui/ResourceDisplay.gd" id="2_resourcedisplay"]
+
+[node name="Aquarium" type="Node2D"]
+script = ExtResource("1_controller")
+
+[node name="Camera2D" type="Camera2D" parent="."]
+position = Vector2(0, 0)
+current = true
+
+[node name="Background" type="ColorRect" parent="."]
+offset_left = -600.0
+offset_top = -400.0
+offset_right = 600.0
+offset_bottom = 400.0
+color = Color(0.05, 0.12, 0.22, 1)
+
+[node name="WaterOverlay" type="ColorRect" parent="."]
+offset_left = -580.0
+offset_top = -320.0
+offset_right = 580.0
+offset_bottom = 320.0
+color = Color(0.1, 0.35, 0.45, 0.35)
+
+[node name="Floor" type="ColorRect" parent="."]
+offset_left = -550.0
+offset_top = 260.0
+offset_right = 550.0
+offset_bottom = 320.0
+color = Color(0.15, 0.18, 0.15, 1)
+
+[node name="Entities" type="Node" parent="."]
+
+[node name="Pets" type="Node" parent="."]
+
+[node name="UI" type="CanvasLayer" parent="."]
+
+[node name="ResourceDisplay" type="Control" parent="UI"]
+layout_mode = 3
+anchors_preset = 10
+anchor_right = 1.0
+offset_bottom = 60.0
+grow_horizontal = 2
+script = ExtResource("2_resourcedisplay")
+biomass_label = NodePath("Margin/HBox/biomass_label")
+void_essence_label = NodePath("Margin/HBox/void_label")
+sanity_shards_label = NodePath("Margin/HBox/sanity_label")
+pollution_label = NodePath("Margin/HBox/pollution_label")
+pollution_bar = NodePath("Margin/HBox/pollution_bar")
+
+[node name="Margin" type="MarginContainer" parent="UI/ResourceDisplay"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_constants/margin_left = 20
+theme_override_constants/margin_top = 12
+
+[node name="HBox" type="HBoxContainer" parent="UI/ResourceDisplay/Margin"]
+layout_mode = 2
+theme_override_constants/separation = 24
+
+[node name="biomass_label" type="Label" parent="UI/ResourceDisplay/Margin/HBox"]
+layout_mode = 2
+text = "Biomass: 50"
+theme_override_font_sizes/font_size = 18
+
+[node name="void_label" type="Label" parent="UI/ResourceDisplay/Margin/HBox"]
+layout_mode = 2
+text = "Void: 10"
+theme_override_font_sizes/font_size = 18
+
+[node name="sanity_label" type="Label" parent="UI/ResourceDisplay/Margin/HBox"]
+layout_mode = 2
+text = "Sanity: 5"
+theme_override_font_sizes/font_size = 18
+
+[node name="pollution_label" type="Label" parent="UI/ResourceDisplay/Margin/HBox"]
+layout_mode = 2
+text = "Pollution: 0%"
+theme_override_font_sizes/font_size = 18
+
+[node name="pollution_bar" type="ProgressBar" parent="UI/ResourceDisplay/Margin/HBox"]
+custom_minimum_size = Vector2(160, 24)
+layout_mode = 2
+max_value = 100.0
+value = 0.0
+show_percentage = false
+
+[node name="Instructions" type="Label" parent="UI"]
+offset_left = 20.0
+offset_top = 80.0
+offset_right = 520.0
+offset_bottom = 140.0
+text = "SPACE or click 'Order' to drop container
+LEFT-CLICK container to open
+LEFT-CLICK organs or pets to interact (debug)
+RIGHT-CLICK anywhere: +25 Biomass"
+theme_override_font_sizes/font_size = 16
+modulate = Color(0.8, 0.9, 1, 0.85)
+
+[node name="OrderButton" type="Button" parent="UI"]
+offset_left = 20.0
+offset_top = 160.0
+offset_right = 160.0
+offset_bottom = 200.0
+text = "Order Shipment (10 Biomass)"
+theme_override_font_sizes/font_size = 14
+
+; Small menu button in top-right (primitive shape styled via code)
+[node name="MenuButton" type="Button" parent="UI"]
+layout_mode = 1
+anchors_preset = 1
+anchor_left = 1.0
+anchor_top = 0.0
+anchor_right = 1.0
+anchor_bottom = 0.0
+offset_left = -140.0
+offset_top = 18.0
+offset_right = 0.0
+offset_bottom = 52.0
+text = "MENU"
+theme_override_font_sizes/font_size = 15
+modulate = Color(0.85, 0.8, 0.75, 0.9)
