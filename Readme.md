@@ -16,8 +16,10 @@ Built in Godot 4.x | Casual-strategic incremental sim
 - Deep but accessible economy and pet evolution systems
 
 ## Quick Links
-- [GAME_VISION.md](GAME_VISION.md) — Full design document
+- [GAME_VISION.md](GAME_VISION.md) — Full design document (living vision)
+- [DESIGN_HISTORY.md](DESIGN_HISTORY.md) — Brief chronological record of decisions, pivots, and state (for session restarts)
 - [ASSETS.md](ASSETS.md) — Master asset list
+- [SCAFFOLDING_NOTES.md](SCAFFOLDING_NOTES.md) — How to run the current build + implementation notes + immediate next steps
 - [ROADMAP.md](ROADMAP.md) — (coming soon)
 
 **Playtesters**: Join the beta when ready!

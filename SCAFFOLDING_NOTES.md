@@ -2,6 +2,8 @@
 
 This was generated from the planning docs (Readme + Game_Vision.md).
 
+> For the story of *why* we made certain choices during bootstrap (e.g. GDScript switch) and a running log of design decisions across sessions, see [DESIGN_HISTORY.md](DESIGN_HISTORY.md). This file focuses on "how to get the current build running" and concrete next implementation steps.
+
 ## What Was Created
 
 ### Folder Structure
