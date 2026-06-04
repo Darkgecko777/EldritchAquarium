@@ -9,6 +9,23 @@ This complements:
 - [Assets.md](Assets.md) — asset priorities.
 
 Keep entries **brief**. Focus on *why*, major choices, and what was working at the time. Date + short title.
+
+## 2026-06-04: Dedicated Art Direction & Comic Book Aesthetic
+
+**Major Addition**:
+- Created standalone **Art_Direction.md** as the single source of truth for visual style.
+- Locked in retro comic book / Sea Monkeys mail-order catalog aesthetic as core identity.
+- UI is now treated as an active part of the world (comic panels, ad-style shop, speech bubbles).
+
+**Rationale**:
+- Comic style is AI-asset friendly, highly distinctive, and perfectly matches the Uncanny Mercantile tone.
+- Strong integration between visuals and mechanics (UI as shady distributor catalog).
+- Provides focused reference for asset generation sessions in this chat.
+
+**Impact**:
+- First 5 minutes now framed as a comic book ad experience.
+- Future mechanics (madness, prestige decorations, shop) will springboard from this aesthetic.
+
 ## 2026-06-04: Autonomous Tank & Interaction Refinements
 
 **What was added / changed**:

@@ -60,4 +60,11 @@ You run a shady interstellar pet supply business. Your ever-expanding underwater
 - Tank feels alive and reactive.
 - Players excited to prestige for new visual layers and stronger bonuses.
 
+## Art Direction
+See **Art_Direction.md** (primary reference for all visual assets, UI, and comic book style).
+
+**Summary for Implementation**:
+- Retro comic book advertisement / Sea Monkeys aesthetic with eldritch horror twists.
+- UI is fully integrated as part of the fantasy (comic panels, catalog pages, vintage ads).
+- This style is central — it influences mechanics like madness events (speech bubbles), shop presentation, and prestige cosmetic layers.
 This document is the living source of truth.
