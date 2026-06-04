@@ -1,27 +1,47 @@
 # Game Vision - Eldritch Aquarium
-**Version**: 1.1 (Autonomous Tank Refinement)  
-**Date**: 2026-06-04  
+**Version**: 1.3 (Universal Pet Acquisition via Ad + Strict Eating-Only Economy)  
+**Date**: 2026-06-05  
 **Brand**: Uncanny Mercantile
 
 ## Core Fantasy
-You run a shady interstellar pet supply business. Your ever-expanding underwater tank is the heart of the operation. Order suspicious shipments from the eldritch void, watch shipping containers physically drop into the tank, crack them open for random organs, and watch your cosmic pets actively hunt, consume, and evolve. The more you scale, the weirder, more powerful, and reality-bending your pets become.
+You run a shady interstellar pet supply business under the Uncanny Mercantile brand. All pets are acquired exclusively through the comic book "order" interface (starting as a "Sea Monkey" kit ad). The first pet arrives as an egg that hatches into a larval critter after a short incubation (accelerated by food arrival). Future pets are gated behind development conditions but still ordered through evolving versions of the same ad/catalog page. While your pets autonomously collide with and consume organs in the tank, they generate Eldritch Insight and other resources. The more you scale, the weirder, more powerful, and reality-bending they become. The tank is your ever-expanding storefront and laboratory in the void.
 
 **Tone**: Playful uncanny horror with light humor. Madness effects are fun and mechanically useful rather than punishing.
 
 ## Core Gameplay Loop
-1. **Acquire** — Use UI buttons to order shipments (costs Biomass).
-2. **Delivery** — Containers physically drop from the top of the tank.
-3. **Unboxing** — Click landed containers to release random organs.
-4. **Autonomous Feeding** — Organs float/sink and are drawn toward nearby pets (collision-based eating).
-5. **Growth & Evolution** — Pets consume organs, grow, gain stats, and evolve when thresholds are met.
-6. **Manage & Optimize** — Balance Biomass spending (shipments vs upgrades), monitor Pollution, trigger minor madness events.
-7. **Scale** — Prestige for new cosmetic tank layers + permanent bonuses.
+1. **The Ad / Order Screen** — All pet acquisition happens through the comic book advertisement / catalog page (TitleScreen for the first pet; dynamically updated version for subsequent pets and continuing runs).
+2. **The Egg (First Pet)** — Clicking "order" drops a special egg. It hatches after a variable incubation period (base ~30s, reduced by food/organs arriving in the tank) into the Sea Monkey larva.
+3. **Unique Starter Food** — The complimentary shipment releases unique starter "incubation packets" (not standard organs) that the larva is attracted to.
+4. **Autonomous Collision Eating** — Pets (starting with the larva) are drawn to food. Consumption requires multiple collisions (e.g. 3-4 for larva). Only successful eating generates resources.
+5. **Resource Generation from Eating** — Eldritch Insight (and occasionally secondary resources) is produced only when pets collide-eat. Different pets/species/stages can yield different quantities or types via RNG for variety and replay.
+6. **Growth & Evolution** — Pets progress through stages, unlocking better yields, new abilities, and weirder visuals.
+7. **Order More** — Once conditions are met, use the (evolving) ad/catalog interface to acquire additional gated pets.
+8. **Manage & Optimize** — Spend generated Insight on more orders/shipments/upgrades, balance Pollution, enjoy madness events.
+9. **Scale** — Prestige for cosmetic tank layers and bonuses.
 
 ## Key Interaction Model
-- **Player primarily interacts with UI**: Order shipments, buy upgrades, prestige, etc.
-- **Tank is mostly autonomous**: Pets swim and seek organs on their own. Organs are attracted to pets.
-- **Limited direct clicks**: Only on shipping containers (to open) and UI elements. This avoids click-detection issues with animated sprites.
-- Optional future: Toggleable auto-collect or minor drag-to-feed.
+- **Player primarily interacts with UI**: The comic ad / "Order Specimen" catalog page (the primary way to acquire every pet), shipment orders, upgrades, etc. The title screen serves this role and changes dynamically based on run state (full sales-pitch ad for brand new games; catalog updates, "re-stock exotic specimens," or tank-status comic panels for continuing games after the first hatch).
+- **Tank is strictly autonomous for economy**: Pets swim, seek, and collide-eat on their own. **All Insight and resource generation happens exclusively here** — no direct collection or external grants.
+- **Limited direct clicks in tank**: Mainly shipping containers (to open and release food). The egg and starter packets are for the opening tutorial only.
+- Food arrival (from any container) during an active egg incubation actively reduces the hatch timer, making the complimentary shipment mechanically useful for speeding up your first pet.
+
+## Opening Sequence (The Comic Book Ad Experience)
+This is the signature first impression, tutorial, and the permanent method for acquiring every future pet.
+
+- The game launches into (or the TitleScreen *is*) a full-page retro comic book advertisement in the "ACME Void Supply Co." / classic Sea Monkeys mail-order style.
+- Prominent call-to-action: **"ORDER YOUR SEA MONKEY KIT — CLICK HERE!"** (thematically cheap or "free with cosmic shipping" for the first one).
+- Clicking the button in the ad causes the **egg** to physically drop into the tank view (smooth transition or the ad is the background of the tank area for the first run).
+- A comic-style incubation indicator ("INCUBATING... 30s", progress bar, or twitching egg visuals) counts down. The base time is approximate/arbitrary (~30s); **arrival of food in the tank reduces the remaining timer**.
+- A second prominent element (or revealed panel) offers the **complimentary shipment** — a one-time zero-cost container that drops, is clicked open, and releases **unique starter incubation packets** (special "Sea Monkey food" items created just for the opening — not standard random organs from later shipments).
+- When the timer hits zero (or is accelerated to zero), the egg hatches with a satisfying effect into the weird larval Sea Monkey critter.
+- The larva demonstrates the core loop immediately: drawn toward the unique starter packets. Multiple collisions (e.g. 3–4) are required before consumption. On successful eat: comic "MUNCH!" / impact VFX + resource generation popup.
+- **Critical rule**: Resources (primarily Eldritch Insight) are generated *only* by pet collision-eating. The starter packets exist solely to bootstrap this first demonstration.
+- After the first successful eats, the player has Insight to spend on normal (paid) shipments via the same ad/catalog interface, which now transitions into ongoing "order more specimens" mode.
+- For subsequent pets (once development conditions are met): the title/catalog page updates its pitch ("Now with more tentacles!", "Exotic Void Variants now available!", current tank comic summary) but uses the same core "order → egg → hatch" flow. The title screen content changes dynamically for players returning to an existing run (no more the brand-new "first kit" sales pitch; instead a "replenish your stock" or "expand your collection" catalog page consistent with the comic aesthetic).
+
+The entire experience — first run and ongoing — reinforces that the comic ad is the storefront and every pet literally comes from ordering out of the page.
+
+This sequence teaches physical delivery, autonomous collision-based eating as the sole economy engine, timer interaction with food arrival, and the universal acquisition method.
 
 ## Key Systems
 
@@ -31,13 +51,18 @@ You run a shady interstellar pet supply business. Your ever-expanding underwater
 - Vibrant yet eerie aesthetic with particles, bubbles, water distortion, and glowing effects.
 
 ### Economy & Resources
-- **Biomass** (main currency) — spent on shipments and upgrades.
-- **Void Essence** & **Sanity Shards** (prestige currencies).
-- **Pollution** — introduced early (visible ~minute 3-5). Boosts growth/speed but increases madness frequency. Creates meaningful spending decisions (more shipments = faster pollution).
+- **Eldritch Insight** (primary basic currency) — **generated exclusively when pets successfully consume via autonomous collisions**. Different pets, species, or evolution stages can produce varying amounts or occasional secondary resources (Void Essence chance, etc.) using light RNG for variety and personality. Spent on ordering new pets/shipments via the ad interface, upgrades, etc.
+- **Void Essence** & **Sanity Shards** (prestige / special currencies — can also rarely drop from high-tier pet eating).
+- **Pollution** — introduced early (visible during/after the first hatch window; rises with activity and food consumption). Boosts growth/speed but increases madness frequency. Creates meaningful spending and risk decisions.
+- **Strict rule**: No resources are granted by picking up organs, direct clicks, debug, or external actions. The tank's pets are the only producers. The unique starter incubation packets for the first egg exist only to kickstart the first collision-eating demonstration.
+- Early game bootstrap: The first egg + complimentary starter packets have no Insight cost. The ad itself for the very first pet is the "free kit" gateway.
 
 ### Pets
-- Central focus. Start as simple larvae, evolve into complex eldritch forms.
-- Active behaviors: swimming, seeking organs, synergies, special abilities.
+- Central focus. **Every single pet is acquired through the comic book ad / "Order Specimen" catalog interface** (the TitleScreen for the first; an updated, state-aware version of the same screen for all future acquisitions and for continuing existing games).
+- The very first pet is always the "Sea Monkey" larva hatched from the initial ad egg + unique starter packets.
+- Future pets are gated behind development conditions (examples: total Eldritch Insight earned, number of successful evolutions, specific organ types consumed, pollution level reached, rare mutations witnessed, etc.). Gating keeps the ad exciting as new "catalog pages" or "exotic imports" unlock.
+- All pets start in larval form (Sea Monkey is the iconic starter) and evolve through juvenile → mature → eldritch stages with increasingly grotesque yet playful comic-book visuals.
+- Active behaviors: swimming, seeking food via attraction, repeated collisions to eat (larval stage makes the "learning" collisions especially prominent and charming), pet-specific resource yields on consumption (RNG variance), synergies, special abilities, and madness interactions.
 
 ### Pollution & Madness
 - Pollution ramps with activity and acts like "high-speed aquarium maintenance."

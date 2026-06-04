@@ -43,6 +43,7 @@ func _ready() -> void:
 		add_child(area)
 
 	area.input_event.connect(_on_area_input_event)
+	area.input_pickable = true
 
 	# Start dropped state will be set by Initialize + Drop
 
@@ -60,8 +61,11 @@ func _drop() -> void:
 	tween.set_trans(Tween.TRANS_QUAD)
 	tween.set_ease(Tween.EASE_IN)
 
-	# Move down to a resting "floor" position (AquariumController can clamp later)
-	var target_pos: Vector2 = global_position + Vector2(0, 220.0)
+	# Move down to a resting "floor" position near tank bottom (AquariumController can clamp later)
+	var target_y: float = global_position.y + 400.0
+	if _aquarium != null and "tank_bottom_y" in _aquarium:
+		target_y = _aquarium.tank_bottom_y - 30.0
+	var target_pos: Vector2 = Vector2(global_position.x, target_y)
 
 	tween.tween_property(self, "global_position", target_pos, drop_duration)
 
@@ -88,6 +92,7 @@ func _on_area_input_event(_viewport: Node, event: InputEvent, _shape_idx: int) -
 	if event is InputEventMouseButton:
 		var mouse_event: InputEventMouseButton = event as InputEventMouseButton
 		if mouse_event.button_index == MOUSE_BUTTON_LEFT and mouse_event.pressed:
+			print("[ShippingContainer] Click detected on area, opening...")
 			open()
 			get_viewport().set_input_as_handled()
 

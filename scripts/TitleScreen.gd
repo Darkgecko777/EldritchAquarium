@@ -30,6 +30,11 @@ func _ready() -> void:
 	if void_particles:
 		void_particles.emitting = true
 
+	# v1.3+: Make title screen content dynamic based on run state.
+	# For brand new games: classic "Sea Monkey kit" ad pitch.
+	# For continuing games (after first pet hatched): updated catalog / "order more" page.
+	_apply_dynamic_ad_content()
+
 	print("[TitleScreen] Ready. All visuals are Godot primitives only.")
 
 func _process(delta: float) -> void:
@@ -128,6 +133,37 @@ func _play_start_transition() -> void:
 
 	if is_instance_valid(flash):
 		flash.queue_free()
+
+func _apply_dynamic_ad_content() -> void:
+	# Check GameManager for whether we've already hatched the first pet in this run (or a loaded save).
+	var gm := get_node_or_null("/root/GameManager")
+	var is_continuing := false
+	if gm != null and "first_pet_hatched" in gm:
+		is_continuing = gm.first_pet_hatched
+
+	if not is_continuing:
+		# Fresh run / first pet not yet hatched → classic "new Sea Monkey kit" sales ad.
+		print("[TitleScreen] Fresh run mode: full 'Sea Monkey kit' comic ad pitch.")
+		# Could swap in more sales-y subtitle or button text here when we have comic styling.
+		if start_button:
+			start_button.text = "ORDER SEA MONKEY KIT"
+		return
+
+	# Continuing run → dynamically changed catalog / re-order page. Keep the same visual style.
+	print("[TitleScreen] Continuing run: updated catalog / 'order more specimens' ad content.")
+	if start_button:
+		start_button.text = "ORDER MORE SPECIMENS"
+	if title_label_2:
+		# Slight flavor shift without breaking the logo.
+		pass  # Could modulate or we could have a separate "catalog header" label later.
+	# Update footer + subtitle to feel like a catalog update / ongoing ad.
+	var footer := get_node_or_null("Footer") as Label
+	if footer:
+		footer.text = "Your tank has proven viable. New exotic imports now available."
+	var subtitle := get_node_or_null("LogoContainer/Subtitle") as Label
+	if subtitle:
+		subtitle.text = "Replenish. Expand. Witness the unknowable."
+	# Could add a small "current collection" comic panel summary here in future.
 
 func _on_exit_pressed() -> void:
 	exit_button.disabled = true

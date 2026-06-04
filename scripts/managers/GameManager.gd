@@ -17,14 +17,24 @@ var _resources: Dictionary = {}
 var total_shipments_ordered: int = 0
 var total_organs_collected: int = 0
 
+# Run state for dynamic title/catalog behavior (v1.3+)
+var first_pet_hatched: bool = false
+# When true, the TitleScreen should show an updated "catalog" version of the ad instead of the brand-new Sea Monkey kit pitch.
+
+# Set by TitleScreen "ORDER SEA MONKEY KIT" (or equivalent) for brand new runs.
+# AquariumController consumes it on ready to launch the egg + complimentary opening sequence.
+var pending_opening_sequence: bool = false
+
 func _ready() -> void:
 	_initialize_resources()
 	print("[GameManager] Initialized with starting resources.")
 
 func _initialize_resources() -> void:
-	_resources[GameEnums.ResourceType.BIOMASS] = 50
-	_resources[GameEnums.ResourceType.VOID_ESSENCE] = 10
-	_resources[GameEnums.ResourceType.SANITY_SHARDS] = 5
+	# Start with zero resources. Everything is earned via pet collision-eating (per design).
+	_resources[GameEnums.ResourceType.ELDRITCH_INSIGHT] = 0
+	_resources[GameEnums.ResourceType.BIOMASS] = 0
+	_resources[GameEnums.ResourceType.VOID_ESSENCE] = 0
+	_resources[GameEnums.ResourceType.SANITY_SHARDS] = 0
 	_resources[GameEnums.ResourceType.POLLUTION] = 0  # We track Pollution separately
 
 	resources_changed.emit()
@@ -75,10 +85,14 @@ func try_spend(type: GameEnums.ResourceType, amount: int) -> bool:
 
 ## Core action: Spend resources to order a shipment.
 ## The actual container drop is handled by the AquariumController listening to the signal.
-func order_shipment(biomass_cost: int = 10) -> bool:
-	if not try_spend(GameEnums.ResourceType.BIOMASS, biomass_cost):
-		print("[GameManager] Not enough Biomass to order shipment.")
-		return false
+## TODO (new vision): Switch primary cost to ELDRITCH_INSIGHT. The first "complimentary" shipment in the opening sequence should be free/zero-cost.
+func order_shipment(insight_cost: int = 8) -> bool:
+	# Prefer Eldritch Insight (new basic currency). Fall back to Biomass for current prototype compatibility.
+	var cost_type := GameEnums.ResourceType.ELDRITCH_INSIGHT
+	if not try_spend(cost_type, insight_cost):
+		if not try_spend(GameEnums.ResourceType.BIOMASS, insight_cost):
+			print("[GameManager] Not enough Eldritch Insight (or legacy Biomass) to order shipment.")
+			return false
 
 	total_shipments_ordered += 1
 	add_resource(GameEnums.ResourceType.POLLUTION, 3)  # Every shipment adds a little pollution
@@ -90,11 +104,13 @@ func order_shipment(biomass_cost: int = 10) -> bool:
 ## Resets per-run stats while preserving any future meta-progression.
 ## Called when starting a fresh session from the title screen.
 func start_new_run() -> void:
-	# Keep some resources or give a fresh starting amount
-	_resources[GameEnums.ResourceType.BIOMASS] = 60
-	_resources[GameEnums.ResourceType.VOID_ESSENCE] = 5
-	_resources[GameEnums.ResourceType.SANITY_SHARDS] = 3
-	pollution = 8.0  # Small starting pollution for atmosphere
+	# Fresh run for the comic ad opening experience.
+	# Start with no resources. Insight etc. earned only from the larva eating the starter packets.
+	_resources[GameEnums.ResourceType.ELDRITCH_INSIGHT] = 0
+	_resources[GameEnums.ResourceType.BIOMASS] = 0
+	_resources[GameEnums.ResourceType.VOID_ESSENCE] = 0
+	_resources[GameEnums.ResourceType.SANITY_SHARDS] = 0
+	pollution = 1.0  # Starts low; rises with activity
 
 	total_shipments_ordered = 0
 	total_organs_collected = 0
@@ -102,19 +118,59 @@ func start_new_run() -> void:
 	resources_changed.emit()
 	pollution_changed.emit(pollution)
 
-	print("[GameManager] New run started.")
+	print("[GameManager] New run started (comic ad opening flow).")
+	first_pet_hatched = false
+	pending_opening_sequence = true  # Will trigger the egg + hatch sequence in Aquarium for the first moments.
 
-## Called when an organ is successfully collected / used.
+## Legacy direct collection (organs picked up by player before being eaten).
+## Per v1.3 vision, this should grant *nothing* to the economy. Food exists to be eaten by pets.
+## The only way to generate Insight / resources is via register_pet_consumed_organ below.
 func register_organ_collected(organ_type: GameEnums.OrganType) -> void:
 	total_organs_collected += 1
-	# TODO: Add small resource rewards based on organ type (e.g. more Biomass for Heart)
-	add_resource(GameEnums.ResourceType.BIOMASS, 2)
+	# Do NOT grant Insight or other economy resources here anymore.
+	# Optional: still add a tiny bit of POLLUTION or legacy Biomass for prototype compatibility during transition.
 	add_resource(GameEnums.ResourceType.POLLUTION, 1)
+	# add_resource(GameEnums.ResourceType.BIOMASS, 1)  # commented — prefer to remove
+
+## THE ONLY legitimate source of Insight and secondary resources.
+## Called by Pet when it successfully completes the required collisions and consumes food.
+## Pet type / species / stage + organ type can drive different yields and RNG.
+func register_pet_consumed_organ(pet_data: Dictionary, organ_type: GameEnums.OrganType) -> void:
+	# pet_data example: { "species": "sea_monkey", "stage": GameEnums.EvolutionStage.LARVAL, "pet_name": "..." }
+	# TODO: Implement proper pet-specific tables + light RNG for fun variance.
+	# For now, simple base + small bonus for larval (visible in opening).
+	var base_insight := 3
+	var bonus := 0
+
+	if pet_data.get("stage", -1) == GameEnums.EvolutionStage.LARVAL:
+		base_insight = 2  # starter larva gives modest but reliable amounts during tutorial
+
+	# Starter packets (unique for first hatch) can be tuned differently if desired.
+	if organ_type in [GameEnums.OrganType.STARTER_PRIMAL, GameEnums.OrganType.STARTER_VOID]:
+		bonus += 1
+
+	var insight_gained := base_insight + bonus
+	add_resource(GameEnums.ResourceType.ELDRITCH_INSIGHT, insight_gained)
+
+	# Small chance for secondary resources from certain eats (pet variety hook).
+	if randf() < 0.15:
+		add_resource(GameEnums.ResourceType.VOID_ESSENCE, 1)
+
+	total_organs_collected += 1  # reuse for now; could track consumed vs collected separately
+	add_resource(GameEnums.ResourceType.POLLUTION, 1)
+
+	print("[GameManager] Pet consumed organ: +%d Insight (from %s eating %s). RNG secondaries possible." % [insight_gained, pet_data.get("species", "unknown"), GameEnums.OrganType.keys()[organ_type]])
 
 ## Example madness trigger hook. Call from AquariumController when Pollution is high.
 func trigger_madness_event(description: String) -> void:
 	print_rich("[MADNESS] " + description)
 	# TODO: Emit a signal that AquariumController or UI can react to with fun effects.
+
+## Call this (e.g. from the first Pet hatch or first successful consumption) so the TitleScreen knows
+## to show a continuing-run catalog page instead of the initial "new kit" ad on next visit to title.
+func mark_first_pet_hatched() -> void:
+	first_pet_hatched = true
+	print("[GameManager] First pet hatched — future title screens should use updated catalog/ad content.")
 
 # --- Future expansion hooks ---
 

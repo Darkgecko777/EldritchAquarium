@@ -2,9 +2,11 @@
 
 [ext_resource type="Script" path="res://scripts/AquariumController.gd" id="1_controller"]
 [ext_resource type="Script" path="res://scripts/ui/ResourceDisplay.gd" id="2_resourcedisplay"]
+[ext_resource type="PackedScene" uid="uid://egg_first" path="res://scenes/entities/Egg.tscn" id="3_egg"]
 
 [node name="Aquarium" type="Node2D"]
 script = ExtResource("1_controller")
+egg_scene = ExtResource("3_egg")
 
 [node name="Camera2D" type="Camera2D" parent="."]
 position = Vector2(0, 0)
@@ -66,17 +68,17 @@ theme_override_constants/separation = 24
 
 [node name="biomass_label" type="Label" parent="UI/ResourceDisplay/Margin/HBox"]
 layout_mode = 2
-text = "Biomass: 50"
+text = "Insight: 0"
 theme_override_font_sizes/font_size = 18
 
 [node name="void_label" type="Label" parent="UI/ResourceDisplay/Margin/HBox"]
 layout_mode = 2
-text = "Void: 10"
+text = "Void: 0"
 theme_override_font_sizes/font_size = 18
 
 [node name="sanity_label" type="Label" parent="UI/ResourceDisplay/Margin/HBox"]
 layout_mode = 2
-text = "Sanity: 5"
+text = "Sanity: 0"
 theme_override_font_sizes/font_size = 18
 
 [node name="pollution_label" type="Label" parent="UI/ResourceDisplay/Margin/HBox"]
@@ -96,10 +98,8 @@ offset_left = 20.0
 offset_top = 80.0
 offset_right = 520.0
 offset_bottom = 140.0
-text = "SPACE or click 'Order' to drop container
-LEFT-CLICK container to open
-LEFT-CLICK organs or pets to interact (debug)
-RIGHT-CLICK anywhere: +25 Biomass"
+text = "SPACE or Order button to drop containers
+Watch your pets seek and collide-eat for Insight (the only way to earn!)"
 theme_override_font_sizes/font_size = 16
 modulate = Color(0.8, 0.9, 1, 0.85)
 
@@ -108,7 +108,7 @@ offset_left = 20.0
 offset_top = 160.0
 offset_right = 160.0
 offset_bottom = 200.0
-text = "Order Shipment (10 Biomass)"
+text = "Order Shipment (Insight)"
 theme_override_font_sizes/font_size = 14
 
 ; Small menu button in top-right (primitive shape styled via code)

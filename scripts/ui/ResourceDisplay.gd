@@ -5,7 +5,7 @@
 extends Control
 
 @export_group("Labels (assign in inspector)")
-@export var biomass_label: Label
+@export var biomass_label: Label  # Repurposed for primary currency display (now Eldritch Insight per v1.2 vision)
 @export var void_essence_label: Label
 @export var sanity_shards_label: Label
 @export var pollution_label: Label  # Could be a ProgressBar instead / in addition
@@ -14,11 +14,33 @@ extends Control
 
 var _game_manager: Node
 
+var _insight_shown := false
+var _void_shown := false
+var _sanity_shown := false
+
+# Cache the resource types to avoid any potential lookup issues and for clarity
+const InsightType := GameEnums.ResourceType.ELDRITCH_INSIGHT
+const VoidType := GameEnums.ResourceType.VOID_ESSENCE
+const SanityType := GameEnums.ResourceType.SANITY_SHARDS
+
 func _ready() -> void:
 	_game_manager = get_node_or_null("/root/GameManager")
 	if _game_manager == null:
 		printerr("ResourceDisplay could not find GameManager.")
 		return
+
+	# Start hidden until first accumulation (per design)
+	if biomass_label:
+		biomass_label.visible = false
+	if void_essence_label:
+		void_essence_label.visible = false
+	if sanity_shards_label:
+		sanity_shards_label.visible = false
+	# Pollution meter can show from the start as it's always relevant
+	if pollution_label:
+		pollution_label.visible = true
+	if pollution_bar:
+		pollution_bar.visible = true
 
 	# Connect using GDScript signal style
 	if _game_manager.has_signal("resources_changed"):
@@ -32,14 +54,36 @@ func _update_display() -> void:
 	if _game_manager == null:
 		return
 
+	var insight: int = 0
+	if _game_manager and _game_manager.has_method("get_resource"):
+		insight = _game_manager.get_resource(InsightType)
 	if biomass_label:
-		biomass_label.text = "Biomass: %d" % _game_manager.get_resource(GameEnums.ResourceType.BIOMASS)
+		# Primary basic currency is now Eldritch Insight (earned via autonomous pet feeding / collisions).
+		if insight > 0:
+			_insight_shown = true
+		biomass_label.visible = _insight_shown
+		if _insight_shown:
+			biomass_label.text = "Insight: %d" % insight
 
+	var v: int = 0
+	if _game_manager and _game_manager.has_method("get_resource"):
+		v = _game_manager.get_resource(VoidType)
 	if void_essence_label:
-		void_essence_label.text = "Void: %d" % _game_manager.get_resource(GameEnums.ResourceType.VOID_ESSENCE)
+		if v > 0:
+			_void_shown = true
+		void_essence_label.visible = _void_shown
+		if _void_shown:
+			void_essence_label.text = "Void: %d" % v
 
+	var s: int = 0
+	if _game_manager and _game_manager.has_method("get_resource"):
+		s = _game_manager.get_resource(SanityType)
 	if sanity_shards_label:
-		sanity_shards_label.text = "Sanity: %d" % _game_manager.get_resource(GameEnums.ResourceType.SANITY_SHARDS)
+		if s > 0:
+			_sanity_shown = true
+		sanity_shards_label.visible = _sanity_shown
+		if _sanity_shown:
+			sanity_shards_label.text = "Sanity: %d" % s
 
 	var pollution: float = _game_manager.pollution
 
@@ -59,3 +103,4 @@ func _update_display() -> void:
 # TODO: Add click handlers on resource icons for tooltips or "spend" shortcuts
 # TODO: Animate value changes (count-up instead of instant)
 # TODO: Eldritch styling: dripping text, occasional glitch on high pollution
+# TODO (comic vision): Restyle entire HUD as comic catalog "ledger stamps" / "ACME Void Supply Co." printed receipts. The "Insight" label should feel earned from the tank activity.

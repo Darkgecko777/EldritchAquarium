@@ -5,7 +5,7 @@
 
 You're running a shady interstellar PetSmart in the void — ordering suspicious shipments, cracking open containers, feeding and evolving increasingly bizarre eldritch pets in your ever-expanding underwater tank. Manage resources, balance pollution, upgrade your operation, and watch your pets grow from cute oddities into reality-bending monstrosities.
 
-**Core Loop**: Order shipments → Containers drop into the tank → Open them for organs → Feed and evolve pets → Optimize economy → Prestige and scale.
+**Core Loop**: Comic ad/catalog (title screen) "order specimen" → Egg drops (first pet), hatch timer reduced by food arrival → Unique starter packets from complimentary shipment → Pets autonomously collide-eat (only source of Insight + resources, with pet-specific RNG yields) → Evolve & unlock more gated pets via the evolving ad → Manage pollution & spend Insight → Prestige. All pets arrive through the ad flow. Title changes for continuing runs.
 
 Built in Godot 4.x | Casual-strategic incremental sim
 

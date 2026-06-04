@@ -1,0 +1,7 @@
+[gd_scene load_steps=2 format=3 uid="uid://egg_first"]
+
+[ext_resource type="Script" path="res://scripts/entities/Egg.gd" id="1_egg"]
+
+[node name="Egg" type="Node2D"]
+script = ExtResource("1_egg")
+base_hatch_time = 30.0
