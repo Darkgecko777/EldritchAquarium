@@ -9,7 +9,26 @@ This complements:
 - [Assets.md](Assets.md) — asset priorities.
 
 Keep entries **brief**. Focus on *why*, major choices, and what was working at the time. Date + short title.
+## 2026-06-04: Autonomous Tank & Interaction Refinements
 
+**What was added / changed**:
+- Shifted to primarily autonomous tank behaviors (organs drawn to pets, pets actively seek food).
+- Player interaction model locked to UI buttons + container clicks only.
+- Pollution introduced early with visible effects and risk/reward.
+- Prestige redefined as single tank receiving new cosmetic layers (ornamental structures, divers, etc.) tied to permanent bonuses.
+- Emphasized resource allocation decisions between shipments and upgrades.
+
+**Design Decisions & Rationale**:
+- Autonomous behaviors reduce physics/click-detection complexity in Godot while making the tank feel alive and satisfying to watch.
+- Single tank + cosmetic prestige layers gives strong visual progression without complicating the playspace.
+- Early pollution creates immediate decision-making and ties into the "legitimate aquarium in high speed" fantasy.
+- Maintains idle-friendly pacing with other activities to pivot to during waits.
+
+**State at end of work**:
+- Vision now tightly aligned for Grok Build implementation.
+- Ready for next implementation phase focused on AquariumController refinements.
+
+---
 ---
 
 ## 2026-06-03: Initial Bootstrap & "Early Prototype Build"
