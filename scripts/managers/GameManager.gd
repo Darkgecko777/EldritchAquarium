@@ -132,25 +132,16 @@ func register_organ_collected(organ_type: GameEnums.OrganType) -> void:
 	add_resource(GameEnums.ResourceType.POLLUTION, 1)
 	# add_resource(GameEnums.ResourceType.BIOMASS, 1)  # commented — prefer to remove
 
-## THE ONLY legitimate source of Insight and secondary resources.
 ## Called by Pet when it successfully completes the required collisions and consumes food.
-## Pet type / species / stage + organ type can drive different yields and RNG.
+## Main Insight is emitted *gradually* one (per-bite) at a time from Organ.on_pet_bump (so tokens fly individually to UI).
+## This function adds a small +1 final bonus on full consume (plus side effects like pollution, void RNG, totals).
+## The final +1 is the "appropriate amount" for the consume event itself (kept small to preserve one-at-a-time releases).
 func register_pet_consumed_organ(pet_data: Dictionary, organ_type: GameEnums.OrganType) -> void:
 	# pet_data example: { "species": "sea_monkey", "stage": GameEnums.EvolutionStage.LARVAL, "pet_name": "..." }
-	# TODO: Implement proper pet-specific tables + light RNG for fun variance.
-	# For now, simple base + small bonus for larval (visible in opening).
-	var base_insight := 3
-	var bonus := 0
-
-	if pet_data.get("stage", -1) == GameEnums.EvolutionStage.LARVAL:
-		base_insight = 2  # starter larva gives modest but reliable amounts during tutorial
-
-	# Starter packets (unique for first hatch) can be tuned differently if desired.
-	if organ_type in [GameEnums.OrganType.STARTER_PRIMAL, GameEnums.OrganType.STARTER_VOID]:
-		bonus += 1
-
-	var insight_gained := base_insight + bonus
-	add_resource(GameEnums.ResourceType.ELDRITCH_INSIGHT, insight_gained)
+	# Small final bonus insight on full consume (the "eat" event / completing the organ).
+	# Kept to +1 so releases stay one at a time (in addition to the per-bite amounts from Organ.on_pet_bump).
+	# The per-bite amounts already provide the main "insight_value" defined on the organ.
+	add_resource(GameEnums.ResourceType.ELDRITCH_INSIGHT, 1)
 
 	# Small chance for secondary resources from certain eats (pet variety hook).
 	if randf() < 0.15:
@@ -159,7 +150,7 @@ func register_pet_consumed_organ(pet_data: Dictionary, organ_type: GameEnums.Org
 	total_organs_collected += 1  # reuse for now; could track consumed vs collected separately
 	add_resource(GameEnums.ResourceType.POLLUTION, 1)
 
-	print("[GameManager] Pet consumed organ: +%d Insight (from %s eating %s). RNG secondaries possible." % [insight_gained, pet_data.get("species", "unknown"), GameEnums.OrganType.keys()[organ_type]])
+	print("[GameManager] Pet consumed organ (from %s eating %s). +1 final insight bonus. RNG secondaries possible." % [pet_data.get("species", "unknown"), GameEnums.OrganType.keys()[organ_type]])
 
 ## Example madness trigger hook. Call from AquariumController when Pollution is high.
 func trigger_madness_event(description: String) -> void:

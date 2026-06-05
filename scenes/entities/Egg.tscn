@@ -1,7 +1,12 @@
-[gd_scene load_steps=2 format=3 uid="uid://egg_first"]
+[gd_scene load_steps=3 format=3 uid="uid://egg_first"]
 
 [ext_resource type="Script" path="res://scripts/entities/Egg.gd" id="1_egg"]
+[ext_resource type="Texture2D" path="res://assets/sprites/pets/starter/eldritch_starter_egg.png" id="2_egg"]
 
 [node name="Egg" type="Node2D"]
 script = ExtResource("1_egg")
 base_hatch_time = 30.0
+
+[node name="Shell" type="Sprite2D" parent="."]
+texture = ExtResource("2_egg")
+scale = Vector2(0.048828, 0.048828)

@@ -12,8 +12,8 @@ var _aquarium_controller: Node
 var _hatched: bool = false
 
 # Primitive visuals
-var _shell: ColorRect
-var _inner: ColorRect
+var _shell: CanvasItem
+var _inner: CanvasItem
 var _timer_label: Label
 var _status_label: Label  # e.g. "INCUBATING..."
 
@@ -55,10 +55,11 @@ func _process(delta: float) -> void:
 		var pulse: float = 1.0 + sin(Time.get_ticks_msec() / 180.0) * (0.03 + progress * 0.08)
 		_shell.scale = _original_scale * pulse
 
-		# Color warms / gets uncanny as it nears hatch
-		var base_col := Color(0.85, 0.82, 0.7)
-		var hatch_col := Color(0.6, 0.3, 0.45)
-		_shell.color = base_col.lerp(hatch_col, progress * 0.7)
+		# Color warms / gets uncanny as it nears hatch (only for primitive)
+		if _shell is ColorRect:
+			var base_col := Color(0.85, 0.82, 0.7)
+			var hatch_col := Color(0.6, 0.3, 0.45)
+			_shell.color = base_col.lerp(hatch_col, progress * 0.7)
 
 func _start_drop_tween() -> void:
 	# Similar to container drop for consistency
@@ -80,35 +81,40 @@ func _start_drop_tween() -> void:
 	# Gentle settle impact
 	if _shell:
 		var settle := create_tween()
-		settle.tween_property(_shell, "scale", Vector2(1.1, 0.9), 0.1)
+		settle.tween_property(_shell, "scale", _original_scale * Vector2(1.1, 0.9), 0.1)
 		settle.tween_property(_shell, "scale", _original_scale, 0.25)
 
 	print("[Egg] Landed and incubating.")
 
 func _build_primitives() -> void:
-	# Outer shell - egg shaped via size + color
-	_shell = ColorRect.new()
-	_shell.name = "Shell"
-	_shell.size = Vector2(48, 38)
-	_shell.position = Vector2(-24, -19)
-	_shell.color = Color(0.85, 0.82, 0.7)
-	_shell.pivot_offset = _shell.size / 2
-	add_child(_shell)
+	_shell = get_node_or_null("Shell")
+	if _shell == null:
+		# Outer shell - egg shaped via size + color (fallback primitive)
+		_shell = ColorRect.new()
+		_shell.name = "Shell"
+		_shell.size = Vector2(48, 38)
+		_shell.position = Vector2(-24, -19)
+		_shell.color = Color(0.85, 0.82, 0.7)
+		_shell.pivot_offset = _shell.size / 2
+		_shell.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		add_child(_shell)
 	_original_scale = _shell.scale
 
-	# Inner "yolk" / developing horror hint
-	_inner = ColorRect.new()
-	_inner.name = "Inner"
-	_inner.size = Vector2(22, 18)
-	_inner.position = Vector2(-11, -9)
-	_inner.color = Color(0.35, 0.55, 0.3, 0.6)
-	_shell.add_child(_inner)
+	# Inner "yolk" / developing horror hint (only for primitive rect shell)
+	if _shell is ColorRect:
+		_inner = ColorRect.new()
+		_inner.name = "Inner"
+		_inner.size = Vector2(22, 18)
+		_inner.position = Vector2(-11, -9)
+		_inner.color = Color(0.35, 0.55, 0.3, 0.6)
+		_inner.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		_shell.add_child(_inner)
 
 	# Comic-style status label above
 	_status_label = Label.new()
 	_status_label.name = "StatusLabel"
 	_status_label.text = "INCUBATING..."
-	_status_label.position = Vector2(-45, -48)
+	_status_label.position = Vector2(-25, -55)
 	_status_label.add_theme_font_size_override("font_size", 14)
 	_status_label.modulate = Color(0.9, 0.85, 0.7, 0.95)
 	add_child(_status_label)
@@ -117,7 +123,7 @@ func _build_primitives() -> void:
 	_timer_label = Label.new()
 	_timer_label.name = "TimerLabel"
 	_timer_label.text = "30s"
-	_timer_label.position = Vector2(-18, -32)
+	_timer_label.position = Vector2(-18, -40)
 	_timer_label.add_theme_font_size_override("font_size", 18)
 	_timer_label.modulate = Color(1, 0.95, 0.8)
 	add_child(_timer_label)
@@ -126,7 +132,7 @@ func _build_primitives() -> void:
 	var area := Area2D.new()
 	var shape := CollisionShape2D.new()
 	shape.shape = CircleShape2D.new()
-	(shape.shape as CircleShape2D).radius = 30
+	(shape.shape as CircleShape2D).radius = 32
 	area.add_child(shape)
 	add_child(area)
 	area.input_pickable = true
@@ -174,7 +180,7 @@ func _hatch() -> void:
 		_status_label.modulate = Color(1, 0.6, 0.5)
 	if _shell:
 		var crack := create_tween()
-		crack.tween_property(_shell, "scale", Vector2(1.4, 0.6), 0.1)
+		crack.tween_property(_shell, "scale", _original_scale * Vector2(1.4, 0.6), 0.1)
 		crack.tween_property(_shell, "modulate:a", 0.0, 0.35)
 
 	if _aquarium_controller and _aquarium_controller.has_method("hatch_egg_at"):

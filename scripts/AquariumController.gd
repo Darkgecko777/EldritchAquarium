@@ -20,6 +20,9 @@ extends Node2D
 @export var spawn_x_min: float = -400.0
 @export var spawn_x_max: float = 400.0
 
+@export var organ_tank_resistance: float = 1.0  # Controls how "thick" the water feels for organs. Lower values allow organs to travel/bounce farther from their spawn point before damping to rest.
+@export var insight_icon_texture: Texture2D  # Icon for flying released insight and UI display.
+
 @export_group("Debug")
 @export var enable_test_input: bool = true
 
@@ -67,6 +70,7 @@ func _ready() -> void:
 	held_indicator.size = Vector2(18, 14)
 	held_indicator.visible = false
 	held_indicator.z_index = 100
+	held_indicator.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	if ui_layer:
 		ui_layer.add_child(held_indicator)
 	else:
@@ -103,6 +107,16 @@ func _ready() -> void:
 	if menu_btn:
 		_style_menu_button(menu_btn)
 		menu_btn.pressed.connect(_on_menu_button_pressed)
+
+	# Create invisible static walls so organs explode, bounce off tank bounds, and come to rest floating.
+	_create_tank_bounds()
+
+	# Prevent the large background ColorRects from consuming mouse input.
+	# This allows Area2D / CollisionObject2D mouse events (e.g. ShippingContainer click-to-open, organs, egg, pets) to receive clicks.
+	for n in ["Background", "WaterOverlay", "Floor"]:
+		var ctrl := get_node_or_null(n) as Control
+		if ctrl:
+			ctrl.mouse_filter = Control.MOUSE_FILTER_IGNORE
 
 	# Opening sequence or normal starter?
 	if _game_manager and _game_manager.get("pending_opening_sequence"):
@@ -203,19 +217,31 @@ func spawn_organs_from_container(position: Vector2, count: int = 3) -> void:
 			_egg_node.reduce_timer(10.0)
 		return
 
-	# Normal shipment organs - pop out in different directions to occupy space
+	# Normal shipment organs - pop out in different directions to occupy space (shoot short distance)
 	for i in range(count):
 		var organ: Node = organ_scene.instantiate()
+		organ.global_position = position  # start at container
+
+		# Apply the tank's resistance setting before _ready runs its physics setup.
+		# This lets the "generic resistance value in the tank" affect the organs.
+		if "tank_resistance" in organ:
+			organ.tank_resistance = organ_tank_resistance
+
 		_entities_layer.add_child(organ)
 
-		# Start at container, pop in random dir (tween would fight organ bobbing, so spread placement)
-		var angle := randf() * TAU
-		var dist := randf_range(45.0, 95.0)
-		var offset := Vector2(cos(angle) * dist, sin(angle) * dist * 0.7)
-
-		organ.global_position = position + offset
 		if organ.has_method("initialize"):
 			organ.initialize(_game_manager, self)
+
+		# Apply impulse for physics-based explosion (short distance different dirs, upward bias)
+		# With gravity_scale=0 + tank walls + resistance, this makes them fly out, bounce off bounds, then slow to floating rest.
+		# Increased range for more travel distance (per user feedback on short movement).
+		var impulse = Vector2(randf_range(-200, 200), randf_range(-300, -50)).normalized() * randf_range(350, 550)
+		organ.apply_impulse(impulse)
+
+		# Set reasonable defaults for normal organs
+		organ.bites_to_consume = 4
+		organ.insight_value = 4
+		organ.remaining_bites = 4
 
 	# Any food arrival while egg is active helps it hatch sooner (even normal shipments during opening)
 	if _in_opening and _egg_node and _egg_node.has_method("reduce_timer"):
@@ -343,6 +369,7 @@ func _create_incubation_ui() -> void:
 	_incubating_label.position = Vector2(20, 210)
 	_incubating_label.add_theme_font_size_override("font_size", 22)
 	_incubating_label.modulate = Color(0.95, 0.9, 0.7)
+	_incubating_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	ui_layer.add_child(_incubating_label)
 
 	# Simple bar to show progress (0 = just started, full = about to hatch)
@@ -353,6 +380,7 @@ func _create_incubation_ui() -> void:
 	_incubating_bar.max_value = 100.0
 	_incubating_bar.value = 0.0
 	_incubating_bar.show_percentage = false
+	_incubating_bar.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	ui_layer.add_child(_incubating_bar)
 
 func _update_incubation_ui() -> void:
@@ -395,22 +423,6 @@ func _claim_complimentary_shipment() -> void:
 
 	_complimentary_claimed = true
 
-	# For the opening sequence, auto-open the complimentary container after drop time so the starter packets are guaranteed to be released (clicking should work, but this ensures the first moments flow even if input has prototype issues).
-	if container:
-		var drop_time := 1.5
-		if "drop_duration" in container:
-			drop_time = container.drop_duration + 0.5
-		var t := get_tree().create_timer(drop_time)
-		t.timeout.connect(func():
-			if is_instance_valid(container) and container.has_method("open"):
-				var is_opened := false
-				if "_is_opened" in container:
-					is_opened = container._is_opened
-				if not is_opened:
-					print("[AquariumController] Auto-opening complimentary shipment to release the unique starter packets.")
-					container.open()
-		)
-
 	# Change button back toward normal (player can still order paid after)
 	var order_btn: Button = get_node_or_null("UI/OrderButton")
 	if order_btn and _opening_order_button_original_text != "":
@@ -434,25 +446,37 @@ func _spawn_starter_packets(at_position: Vector2) -> void:
 
 	for i in range(2):
 		var packet: Node = organ_scene.instantiate()
-		_entities_layer.add_child(packet)
+		packet.global_position = at_position  # start at container for launch
 
-		# Pop out in different directions for the opening demo
-		var angle := randf() * TAU
-		var dist := randf_range(50.0, 100.0)
-		var offset := Vector2(cos(angle) * dist, sin(angle) * dist * 0.65)
-		packet.global_position = at_position + offset
+		# Apply tank resistance so starter packets also respect the water "thickness".
+		if "tank_resistance" in packet:
+			packet.tank_resistance = organ_tank_resistance
+
+		_entities_layer.add_child(packet)
 
 		if packet.has_method("initialize"):
 			packet.initialize(_game_manager, self)
+
+		# Set per organ resource values and bite counts for initial state (2 and 3 insight, 2 and 3 bites)
+		var bites := 2 if i == 0 else 3
+		packet.bites_to_consume = bites
+		packet.insight_value = bites
+		packet.remaining_bites = bites
+		packet.biomass_value = bites  # for any legacy
 
 		# Force the special starter type (bypass random in Organ._ready)
 		if packet.has_method("set_organ_type"):
 			packet.set_organ_type(starter_types[i])
 		else:
-			# Direct set + force visual update if possible
 			packet.set("type", starter_types[i])
 			if packet.has_method("_update_visual_for_type"):
 				packet.call("_update_visual_for_type")
+
+		# Apply impulse for physics-based explosion: short distance in different directions, upward bias for arc
+		# (see normal organs for notes on no-gravity + bounce + resistance behavior)
+		# Increased for more travel (organs were stopping too close to drop point).
+		var impulse = Vector2(randf_range(-200, 200), randf_range(-300, -50)).normalized() * randf_range(350, 550)
+		packet.apply_impulse(impulse)
 
 	print("[AquariumController] Spawned 2 unique starter packets at ", at_position)
 
@@ -541,6 +565,144 @@ func clamp_to_tank(pos: Vector2) -> Vector2:
 	var x: float = clamp(pos.x, spawn_x_min, spawn_x_max)
 	var y: float = clamp(pos.y, tank_top_y, tank_bottom_y)
 	return Vector2(x, y)
+
+## Creates invisible StaticBody2D walls around the tank play area.
+## This lets RigidBody organs (etc.) physically bounce off the bounds after exploding
+## from a shipment instead of sinking to the bottom or flying off-screen.
+## They will ricochet a bit then (thanks to linear_damp "resistance") come to rest floating
+## at whatever position their momentum dies.
+func _create_tank_bounds() -> void:
+	# Clean up if re-entering (e.g. editor reload scenarios)
+	var old := get_node_or_null("TankWalls")
+	if old:
+		old.queue_free()
+
+	var walls := StaticBody2D.new()
+	walls.name = "TankWalls"
+	walls.collision_layer = 1
+	walls.collision_mask = 1
+
+	# Bounciness of the tank "glass"/walls. Organs also have their own PhysicsMaterial.
+	var phys_mat := PhysicsMaterial.new()
+	phys_mat.bounce = 0.65
+	phys_mat.friction = 0.03
+	walls.physics_material_override = phys_mat
+
+	add_child(walls)
+
+	var thickness := 36.0
+	var margin := 40.0  # larger margin to give collision radius (16) + buffer room so organs don't immediately clip walls on spawn near edges, allowing fuller travel
+	var left := spawn_x_min - margin
+	var right := spawn_x_max + margin
+	var top := tank_top_y - margin
+	var bottom := tank_bottom_y + margin
+
+	# Vertical walls (left/right) - tall
+	_add_wall_rect(walls, Vector2(thickness, bottom - top + 120.0), Vector2(left - thickness * 0.5, (top + bottom) * 0.5))
+	_add_wall_rect(walls, Vector2(thickness, bottom - top + 120.0), Vector2(right + thickness * 0.5, (top + bottom) * 0.5))
+
+	# Horizontal walls (top/bottom) - wide
+	_add_wall_rect(walls, Vector2(right - left + 120.0, thickness), Vector2((left + right) * 0.5, top - thickness * 0.5))
+	_add_wall_rect(walls, Vector2(right - left + 120.0, thickness), Vector2((left + right) * 0.5, bottom + thickness * 0.5))
+
+func _add_wall_rect(parent: Node, size: Vector2, pos: Vector2) -> void:
+	var col := CollisionShape2D.new()
+	var rect := RectangleShape2D.new()
+	rect.size = size
+	col.shape = rect
+	col.position = pos
+	parent.add_child(col)
+
+func world_to_screen(world_pos: Vector2) -> Vector2:
+	# Convert world position to screen/UI coordinates for floating resource text that can target the HUD label.
+	# Manual transform using canvas + camera inverse (Camera2D in Godot 4 does not have unproject_position; that's for 3D).
+	var cam := get_viewport().get_camera_2d()
+	if cam == null:
+		return world_pos
+	var canvas_xform := get_viewport().get_canvas_transform()
+	var cam_inv := cam.get_global_transform().affine_inverse()
+	return canvas_xform * cam_inv * world_pos
+
+# Spawn a floating resource indicator using the insight icon (starts 10x10, lerps scale to 35x35 as it flies to the UI label which is also 35x35).
+# Multiple icon particles for juicy feel, plus the +amount number.
+# The value increase happens via the manager add_resource (which also triggers UI label update + pop).
+func _spawn_floating_resource(world_pos: Vector2, text: String = "+1", color: Color = Color(0.4, 0.85, 1.0), lifetime: float = 1.0) -> void:
+	var ui_layer := get_node_or_null("UI")
+	if ui_layer == null:
+		_spawn_floating_text(text, world_pos, color, lifetime)
+		return
+
+	var start_screen := world_to_screen(world_pos)
+	var target_pos := start_screen + Vector2(0, -100)
+	# Get the actual label node by path (stable) rather than relying on the @export var on the script (which may not be visible via "as Control" or .prop access).
+	var bl := ui_layer.get_node_or_null("ResourceDisplay/Margin/HBox/biomass_label") as Label
+	if bl:
+		target_pos = bl.global_position - Vector2(18, 0)
+
+	# Use insight icon instead of primitive ColorRect for released insight particles.
+	# Start at 10x10, lerp scale up to 35x35 (3.5x) as it moves to the UI label (which will be 35x35).
+	var insight_tex := insight_icon_texture
+	var num_blobs := 3
+	for i in range(num_blobs):
+		var blob: Control
+		if insight_tex == null:
+			blob = ColorRect.new()
+			var sz := 8 + randi() % 6
+			blob.size = Vector2(sz, sz)
+			blob.color = color
+			blob.modulate = Color(1, 1, 1, 0.85 + randf() * 0.15)
+			blob.z_index = 50
+			blob.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		else:
+			blob = TextureRect.new()
+			(blob as TextureRect).texture = insight_tex
+			(blob as TextureRect).expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+			(blob as TextureRect).custom_minimum_size = Vector2(10, 10)
+			blob.size = Vector2(10, 10)
+			blob.modulate = Color(1, 1, 1, 0.9 + randf() * 0.1)
+			blob.z_index = 50
+			blob.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		ui_layer.add_child(blob)
+
+		# slight random start offset around the world pos
+		var offset := Vector2(randf_range(-12, 12), randf_range(-8, 8))
+		blob.position = start_screen + offset - blob.size / 2
+
+		var life := lifetime * (0.85 + randf() * 0.3)
+		var t := create_tween()
+		t.set_parallel(true)
+		# use quad ease out for nicer "float up and arc toward" feel
+		t.set_trans(Tween.TRANS_QUAD)
+		t.set_ease(Tween.EASE_OUT)
+		# slight variation in target for spread
+		var tpos := target_pos + Vector2(randf_range(-8, 8), randf_range(-4, 4))
+		t.tween_property(blob, "position", tpos, life)
+		t.tween_property(blob, "modulate:a", 0.0, life * 0.55).set_delay(life * 0.35)
+		if insight_tex != null:
+			# Lerp scale from 1x (10x10) to 3.5x (35x35) as it approaches the label
+			t.tween_property(blob, "scale", Vector2(3.5, 3.5), life)
+		else:
+			t.tween_property(blob, "scale", Vector2(0.3, 0.3), life * 0.4).set_delay(life * 0.45)
+		t.tween_callback(blob.queue_free).set_delay(life)
+
+	# The +N number label that flies to the UI label (core "insight gained" visual)
+	var num_label := Label.new()
+	num_label.text = text
+	num_label.modulate = Color(0.7, 1.0, 0.85, 1.0)
+	num_label.add_theme_font_size_override("font_size", 14)
+	num_label.z_index = 52
+	ui_layer.add_child(num_label)
+	num_label.position = start_screen - Vector2(8, 8)
+
+	var t2 := create_tween()
+	t2.set_parallel(true)
+	t2.set_trans(Tween.TRANS_QUAD)
+	t2.set_ease(Tween.EASE_OUT)
+	var tpos2 := target_pos + Vector2(randf_range(-4, 4), 0)
+	t2.tween_property(num_label, "position", tpos2 - Vector2(4, 4), lifetime)
+	t2.tween_property(num_label, "modulate:a", 0.0, lifetime * 0.6).set_delay(lifetime * 0.35)
+	t2.tween_property(num_label, "scale", Vector2(0.6, 0.6), lifetime * 0.5).set_delay(lifetime * 0.4)
+	t2.tween_callback(num_label.queue_free).set_delay(lifetime)
 
 # === TITLE SCREEN INTEGRATION (pure shape UI) ===
 

@@ -20,6 +20,8 @@ var _organ_scene: PackedScene
 # Visual placeholder (replace with real sprite later)
 var _visual: ColorRect
 
+var _pressed_on_me: bool = false
+
 func _ready() -> void:
 	# Create a simple visual if none exists
 	_visual = get_node_or_null("Visual")
@@ -29,6 +31,7 @@ func _ready() -> void:
 		_visual.size = Vector2(80, 60)
 		_visual.color = closed_color
 		_visual.position = Vector2(-40, -30)  # center it
+		_visual.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		add_child(_visual)
 
 	# Make clickable
@@ -44,6 +47,8 @@ func _ready() -> void:
 
 	area.input_event.connect(_on_area_input_event)
 	area.input_pickable = true
+	area.mouse_exited.connect(_on_mouse_exited)
+	area.mouse_entered.connect(_on_mouse_entered)
 
 	# Start dropped state will be set by Initialize + Drop
 
@@ -90,11 +95,16 @@ func _on_area_input_event(_viewport: Node, event: InputEvent, _shape_idx: int) -
 		return
 
 	if event is InputEventMouseButton:
-		var mouse_event: InputEventMouseButton = event as InputEventMouseButton
-		if mouse_event.button_index == MOUSE_BUTTON_LEFT and mouse_event.pressed:
-			print("[ShippingContainer] Click detected on area, opening...")
-			open()
-			get_viewport().set_input_as_handled()
+		var mb: InputEventMouseButton = event as InputEventMouseButton
+		if mb.button_index == MOUSE_BUTTON_LEFT:
+			if mb.pressed:
+				_pressed_on_me = true
+			else:
+				if _pressed_on_me:
+					print("[ShippingContainer] Click detected on area, opening...")
+					open()
+					_pressed_on_me = false
+				get_viewport().set_input_as_handled()
 
 func open() -> void:
 	if _is_opened:
@@ -106,6 +116,7 @@ func open() -> void:
 	# Visual change
 	if _visual:
 		_visual.color = open_color
+		_visual.modulate = Color.WHITE
 
 	# TODO: Play proper opening animation (scale, particles, label "CONTENTS: ???")
 	var open_tween: Tween = create_tween()
@@ -118,5 +129,16 @@ func open() -> void:
 	# Self-destruct after a short delay so player sees the "opened" state briefly
 	var timer: SceneTreeTimer = get_tree().create_timer(0.6)
 	timer.timeout.connect(queue_free)
+
+func _on_mouse_exited() -> void:
+	_pressed_on_me = false
+	if _visual and not _is_opened:
+		_visual.modulate = Color.WHITE
+
+func _on_mouse_entered() -> void:
+	if _is_opened or not _visual:
+		return
+	# Subtle hover to signal the box is clickable (open on click)
+	_visual.modulate = Color(1.2, 1.15, 1.05)
 
 # Future: Add hover highlight, shipping label text, variants (different sizes/colors)

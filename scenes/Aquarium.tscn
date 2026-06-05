@@ -3,10 +3,12 @@
 [ext_resource type="Script" path="res://scripts/AquariumController.gd" id="1_controller"]
 [ext_resource type="Script" path="res://scripts/ui/ResourceDisplay.gd" id="2_resourcedisplay"]
 [ext_resource type="PackedScene" uid="uid://egg_first" path="res://scenes/entities/Egg.tscn" id="3_egg"]
+[ext_resource type="Texture2D" path="res://assets/sprites/icons/eldritch_insight_icon.png" id="4_insight_icon"]
 
 [node name="Aquarium" type="Node2D"]
 script = ExtResource("1_controller")
 egg_scene = ExtResource("3_egg")
+insight_icon_texture = ExtResource("4_insight_icon")
 
 [node name="Camera2D" type="Camera2D" parent="."]
 position = Vector2(0, 0)
@@ -18,6 +20,7 @@ offset_top = -400.0
 offset_right = 600.0
 offset_bottom = 400.0
 color = Color(0.05, 0.12, 0.22, 1)
+mouse_filter = 2
 
 [node name="WaterOverlay" type="ColorRect" parent="."]
 offset_left = -580.0
@@ -25,6 +28,7 @@ offset_top = -320.0
 offset_right = 580.0
 offset_bottom = 320.0
 color = Color(0.1, 0.35, 0.45, 0.35)
+mouse_filter = 2
 
 [node name="Floor" type="ColorRect" parent="."]
 offset_left = -550.0
@@ -32,6 +36,7 @@ offset_top = 260.0
 offset_right = 550.0
 offset_bottom = 320.0
 color = Color(0.15, 0.18, 0.15, 1)
+mouse_filter = 2
 
 [node name="Entities" type="Node" parent="."]
 
@@ -45,7 +50,9 @@ anchors_preset = 10
 anchor_right = 1.0
 offset_bottom = 60.0
 grow_horizontal = 2
+mouse_filter = 2
 script = ExtResource("2_resourcedisplay")
+insight_icon = NodePath("Margin/HBox/insight_icon")
 biomass_label = NodePath("Margin/HBox/biomass_label")
 void_essence_label = NodePath("Margin/HBox/void_label")
 sanity_shards_label = NodePath("Margin/HBox/sanity_label")
@@ -66,9 +73,16 @@ theme_override_constants/margin_top = 12
 layout_mode = 2
 theme_override_constants/separation = 24
 
+[node name="insight_icon" type="TextureRect" parent="UI/ResourceDisplay/Margin/HBox"]
+layout_mode = 2
+custom_minimum_size = Vector2(35, 35)
+texture = ExtResource("4_insight_icon")
+expand_mode = 1
+stretch_mode = 5
+
 [node name="biomass_label" type="Label" parent="UI/ResourceDisplay/Margin/HBox"]
 layout_mode = 2
-text = "Insight: 0"
+text = "0"
 theme_override_font_sizes/font_size = 18
 
 [node name="void_label" type="Label" parent="UI/ResourceDisplay/Margin/HBox"]
