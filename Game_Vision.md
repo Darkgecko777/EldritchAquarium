@@ -51,11 +51,10 @@ This sequence teaches physical delivery, autonomous collision-based eating as th
 - Vibrant yet eerie aesthetic with particles, bubbles, water distortion, and glowing effects.
 
 ### Economy & Resources
-- **Eldritch Insight** (primary basic currency) — **generated exclusively when pets successfully consume via autonomous collisions**. Different pets, species, or evolution stages can produce varying amounts or occasional secondary resources (Void Essence chance, etc.) using light RNG for variety and personality. Spent on ordering new pets/shipments via the ad interface, upgrades, etc.
-- **Void Essence** & **Sanity Shards** (prestige / special currencies — can also rarely drop from high-tier pet eating).
-- **Pollution** — introduced early (visible during/after the first hatch window; rises with activity and food consumption). Boosts growth/speed but increases madness frequency. Creates meaningful spending and risk decisions.
-- **Strict rule**: No resources are granted by picking up organs, direct clicks, debug, or external actions. The tank's pets are the only producers. The unique starter incubation packets for the first egg exist only to kickstart the first collision-eating demonstration.
-- Early game bootstrap: The first egg + complimentary starter packets have no Insight cost. The ad itself for the very first pet is the "free kit" gateway.
+- **Four Core Resources**: Eldritch Insight (shipments/upgrades), Abyssal Biomatter (pet growth/evolutions), Forgotten Mnemonic Fragments (prestige), Pollution (dampening risk/reward).
+- Pollution accumulates from consumption with compounding, slows all gains at high levels → prompts prestige.
+- Madness as hidden meta-resource driving event frequency.
+- Multiple currencies with clear roles and pet-driven loops.
 
 ### Pets
 - Central focus. **Every single pet is acquired through the comic book ad / "Order Specimen" catalog interface** (the TitleScreen for the first; an updated, state-aware version of the same screen for all future acquisitions and for continuing existing games).
@@ -68,6 +67,12 @@ This sequence teaches physical delivery, autonomous collision-based eating as th
 - Pollution ramps with activity and acts like "high-speed aquarium maintenance."
 - Triggers humorous events (helpful glitches, UI gags, bonus resources).
 - Mitigation through specific upgrades and certain pets.
+
+### Madness Mechanics
+- Humorous fourth-wall breaks, visual gags, and quirky events.
+- Triggered by Madness tracker (scales with progress/Pollution).
+- Revealed primarily through 4-panel comic pages: scientists becoming progressively more alien as thresholds crossed.
+- Temporary mechanical effects that are fun/absurd and mechanically useful where possible.
 
 ### Progression & Prestige
 - **Single tank** that visually evolves with prestige tiers.

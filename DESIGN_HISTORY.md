@@ -10,6 +10,23 @@ This complements:
 
 Keep entries **brief**. Focus on *why*, major choices, and what was working at the time. Date + short title.
 
+## 2026-06-05: Resource Lock & Pollution/Madness Refinement
+
+**What was added / changed**:
+- Locked 4 resources: Eldritch Insight, Abyssal Biomatter, Forgotten Mnemonic Fragments, Pollution.
+- Pollution: Dampener on gains (no subtraction), compounding from food, nudges prestige.
+- Madness: Hidden meta for goofy event rate; communicated via alien scientist comics + visuals.
+- Onboarding: Comic ad → first pet + food bundle; threshold-based 4-panel comics for progression guidance (no explicit tutorial).
+- Pet evolutions: Mutually exclusive paths with production vs. cleaning trade-offs.
+
+**Design Decisions & Rationale**:
+- 4 resources strike balance between depth and clarity.
+- Pollution as soft dampener maintains player agency and optimization feel.
+- Comic-driven reveals ensure intuitive progression and strong narrative immersion.
+
+**State at end of work**:
+- High-level systems fully defined. Ready for resource manager implementation + comic integration stubs.
+
 ## 2026-06-05: Universal Ad Acquisition, Strict Eating-Only Economy, Dynamic Title, Food-Accelerated Hatch
 
 **What was added / changed**:
