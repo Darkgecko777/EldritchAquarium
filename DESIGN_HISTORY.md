@@ -10,6 +10,17 @@ This complements:
 
 Keep entries **brief**. Focus on *why*, major choices, and what was working at the time. Date + short title.
 
+## 2026-06-08: Starter Trio + Consumption Loop Lock
+**What was added/changed**:
+- Locked 3 starters with full 5-stage/2-choice evolutions (Goldfish, Minnows, Remora with Overburden).
+- Active consumption: starter-matched shipments, player click collection, rot → Pollution.
+- One starter per run (RNG after unlocks), prestige tree as central upgrade hub.
+- Death always inevitable if unmanaged.
+
+**Rationale**: Strong distinct playstyles, meaningful active layer, iteration-friendly foundation.
+
+**State**: Starters fully designed. Ready for prestige tree + remaining pets.
+
 ## 2026-06-05: Resource Lock & Pollution/Madness Refinement
 
 **What was added / changed**:

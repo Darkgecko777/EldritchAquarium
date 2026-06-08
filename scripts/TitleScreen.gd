@@ -1,7 +1,3 @@
-# scripts/TitleScreen.gd
-# Title screen controller.
-# Uses only Godot built-in nodes (ColorRect, CPUParticles2D, Labels, Buttons, etc.)
-# for all visuals to allow full focus on systems, physics, and UI flow.
 extends Control
 
 @export var game_scene: PackedScene = preload("res://scenes/Aquarium.tscn")
@@ -31,11 +27,11 @@ func _ready() -> void:
 		void_particles.emitting = true
 
 	# v1.3+: Make title screen content dynamic based on run state.
-	# For brand new games: classic "Sea Monkey kit" ad pitch.
+	# For brand new games: exotic "creatures never before seen by man or child!" pitch (Sea Monkeys aesthetic preserved).
 	# For continuing games (after first pet hatched): updated catalog / "order more" page.
 	_apply_dynamic_ad_content()
 
-	print("[TitleScreen] Ready. All visuals are Godot primitives only.")
+	# print("[TitleScreen] Ready. All visuals are Godot primitives only.")  # cleared for resource debug focus
 
 func _process(delta: float) -> void:
 	# Gentle pulsing "logo" effect using only code + modulate/scale
@@ -92,7 +88,7 @@ func _style_button(button: Button, normal_color: Color, hover_color: Color) -> v
 
 func _on_start_pressed() -> void:
 	if game_scene == null:
-		printerr("GameScene not assigned on TitleScreen!")
+		# printerr("GameScene not assigned on TitleScreen!")  # cleared for resource debug focus
 		return
 
 	start_button.disabled = true
@@ -142,15 +138,16 @@ func _apply_dynamic_ad_content() -> void:
 		is_continuing = gm.first_pet_hatched
 
 	if not is_continuing:
-		# Fresh run / first pet not yet hatched → classic "new Sea Monkey kit" sales ad.
-		print("[TitleScreen] Fresh run mode: full 'Sea Monkey kit' comic ad pitch.")
+		# Fresh run / first pet not yet hatched → exotic "creatures never before seen" ad (gold starter playloop).
+		# Keeps Sea Monkeys visual/portal aesthetic and uncanny mercantile tone.
+		# print("[TitleScreen] Fresh run mode: exotic creatures comic ad pitch (gold starter).")  # cleared for resource debug focus
 		# Could swap in more sales-y subtitle or button text here when we have comic styling.
 		if start_button:
-			start_button.text = "ORDER SEA MONKEY KIT"
+			start_button.text = "EXOTIC CREATURES (NEW!)"
 		return
 
-	# Continuing run → dynamically changed catalog / re-order page. Keep the same visual style.
-	print("[TitleScreen] Continuing run: updated catalog / 'order more specimens' ad content.")
+	# Continuing run → dynamically changed catalog / re-order page. Keep the same visual style (gold starter now active).
+		# print("[TitleScreen] Continuing run: updated catalog / 'order more specimens' ad content.")  # cleared for resource debug focus
 	if start_button:
 		start_button.text = "ORDER MORE SPECIMENS"
 	if title_label_2:

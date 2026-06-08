@@ -13,6 +13,7 @@ extends Node2D
 @export var organ_scene: PackedScene
 @export var pet_scene: PackedScene
 @export var egg_scene: PackedScene  # For the opening comic ad egg (fallback load if not assigned)
+@export var resource_glob_scene: PackedScene  # Clickable floating globs for released resources (Insight/Biomatter). Player clicks to collect (then flies to UI).
 
 @export_group("Tank Settings")
 @export var tank_top_y: float = -300.0
@@ -22,6 +23,7 @@ extends Node2D
 
 @export var organ_tank_resistance: float = 1.0  # Controls how "thick" the water feels for organs. Lower values allow organs to travel/bounce farther from their spawn point before damping to rest.
 @export var insight_icon_texture: Texture2D  # Icon for flying released insight and UI display.
+@export var biomatter_icon_texture: Texture2D  # Icon for Abyssal Biomatter globs (optional; falls back to color).
 
 @export_group("Debug")
 @export var enable_test_input: bool = true
@@ -43,6 +45,7 @@ var _incubating_bar: ProgressBar = null  # simple visual timer
 var _complimentary_claimed: bool = false
 var _force_starter_next_drop: bool = false
 var _opening_order_button_original_text: String = ""
+var _comic_panel: Control = null  # Reusable placeholder comic panel for tutorial phases (65% screen, 4-panel layout)
 
 # Pause state
 var _is_paused: bool = false
@@ -62,6 +65,8 @@ func _ready() -> void:
 		pet_scene = load("res://scenes/entities/Pet.tscn")
 	if egg_scene == null:
 		egg_scene = load("res://scenes/entities/Egg.tscn")
+	if resource_glob_scene == null:
+		resource_glob_scene = load("res://scenes/entities/ResourceGlob.tscn")
 
 	# Create a simple held organ indicator (primitive, follows mouse when you have an organ picked up)
 	# Add to UI layer so it's always on top and uses screen coordinates
@@ -123,10 +128,10 @@ func _ready() -> void:
 		_game_manager.pending_opening_sequence = false
 		start_opening_sequence()
 	else:
-		# Normal / continuing run - spawn a generic larval pet (will be replaced by full ad flow later)
+		# Normal / continuing run - spawn a gold starter larval pet (Freaky Goldfish primitive)
 		_spawn_starter_pet()
 
-	print("[AquariumController] Ready. Press SPACE (if enabled) or use the Order button to drop containers.")
+	# print("[AquariumController] Ready. Press SPACE (if enabled) or use the Order button to drop containers.")  # cleared for resource debug focus
 
 func _process(_delta: float) -> void:
 	if held_organ_type != -1 and held_indicator and is_instance_valid(held_indicator):
@@ -152,8 +157,8 @@ func _unhandled_input(event: InputEvent) -> void:
 		get_tree().change_scene_to_file("res://scenes/TitleScreen.tscn")
 		get_viewport().set_input_as_handled()
 
-	# Quick debug: right click (now mostly for legacy Biomass or pollution testing).
-	# Per v1.3: do NOT grant Insight here — only pets eating via collisions generate resources.
+	# Quick debug: right click (now mostly for legacy or pollution testing).
+	# do NOT grant Insight here — only pets eating via collisions generate resources.
 	if event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_RIGHT and event.pressed:
 		if held_organ_type != -1:
 			# Cancel held organ
@@ -162,8 +167,8 @@ func _unhandled_input(event: InputEvent) -> void:
 			if held_indicator:
 				held_indicator.visible = false
 		elif _game_manager and _game_manager.has_method("add_resource"):
-			_game_manager.add_resource(GameEnums.ResourceType.BIOMASS, 25)  # legacy only
-			print("[Debug] Right-click added legacy Biomass. Remember: real Insight only comes from pet eating.")
+			_game_manager.add_resource(GameEnums.ResourceType.ABYSSAL_BIOMATTER, 25)
+			# print("[Debug] Right-click added legacy Biomass. Remember: real Insight only comes from pet eating.")  # cleared for resource debug focus
 
 func _on_order_button_pressed() -> void:
 	if _in_opening and not _complimentary_claimed:
@@ -189,7 +194,7 @@ func _on_shipment_ordered() -> void:
 	if container.has_method("initialize"):
 		container.initialize(self, organ_scene)  # Pass controller + organ scene so it can spawn organs on open
 
-	print("[AquariumController] Container dropped at ", spawn_pos)
+	# print("[AquariumController] Container dropped at ", spawn_pos)  # cleared for resource debug focus
 
 func _on_pollution_changed(new_pollution: float) -> void:
 	# React to high pollution with humorous effects
@@ -265,8 +270,8 @@ func pickup_organ(organ_type: int, value: int, organ_node: Node = null) -> void:
 	# Legacy direct "pickup into held" path. In v1.3 vision the larva (and all pets) will autonomously collide-eat.
 	# Do not grant Insight here. Only the Pet's consumption callback should.
 	if _game_manager and _game_manager.has_method("add_resource"):
-		_game_manager.add_resource(GameEnums.ResourceType.BIOMASS, value)  # legacy raw only
-		print("[AquariumController] Held organ picked — legacy Biomass only. No Insight (must be fed/eaten by pet).")
+		_game_manager.add_resource(GameEnums.ResourceType.ABYSSAL_BIOMATTER, value)
+		print("[AquariumController] Held organ picked — legacy Biomatter only. No Insight (must be fed/eaten by pet).")
 
 func _get_organ_color(organ_type: int) -> Color:
 	match organ_type:
@@ -297,7 +302,7 @@ func try_feed_held_to_pet(pet: Node) -> void:
 	# In v1.3 vision, the *only* real economy payout comes from Pet's collision-eating → register_pet_consumed_organ().
 	# Legacy direct feed path should eventually be removed or become visual-only (no resource grant).
 	if _game_manager and _game_manager.has_method("add_resource"):
-		_game_manager.add_resource(GameEnums.ResourceType.VOID_ESSENCE, 1)  # small bonus on legacy feed path (temporary)
+		_game_manager.add_resource(GameEnums.ResourceType.FORGOTTEN_MNEMONIC_SHARDS, 1)
 
 	# Clear held state
 	held_organ_type = -1
@@ -307,14 +312,18 @@ func try_feed_held_to_pet(pet: Node) -> void:
 
 func _spawn_starter_pet() -> void:
 	if pet_scene == null:
-		print("[AquariumController] No PetScene assigned — skipping starter pet (add one in inspector later).")
+		# print("[AquariumController] No PetScene assigned — skipping starter pet (add one in inspector later).")  # cleared for resource debug focus
 		return
 
 	var pet: Node = pet_scene.instantiate()
 	_pets_layer.add_child(pet)
 
-	# Place it in a nice starting spot
+	# Place it in a nice starting spot (gold starter primitive for non-opening path)
 	pet.global_position = Vector2(0, 100)
+	if "species" in pet:
+		pet.species = GameEnums.PetSpecies.FREAKY_GOLDFISH
+	if "pet_name" in pet:
+		pet.pet_name = "Freaky Goldfish"
 	if pet.has_method("initialize"):
 		pet.initialize(_game_manager, self)
 
@@ -324,12 +333,12 @@ func start_opening_sequence() -> void:
 	_in_opening = true
 	_complimentary_claimed = false
 
-	print("[AquariumController] Starting comic ad opening sequence (egg + complimentary).")
+	# print("[AquariumController] Starting comic ad opening sequence (egg + complimentary).")  # cleared for resource debug focus
 
-	# Update instructions to comic ad flavor
+	# Update instructions to comic ad flavor (exotic creatures pitch for the gold starter, Sea Monkeys aesthetic preserved)
 	var instr: Label = get_node_or_null("UI/Instructions")
 	if instr:
-		instr.text = "Your Sea Monkey kit has arrived in the tank...\nWatch the egg incubate.\nCLAIM the complimentary shipment to get food in the water!"
+		instr.text = "Your exotic specimen kit has arrived in the tank...\nWatch the egg incubate.\nCLAIM the complimentary shipment to get food in the water!"
 
 	# Repurpose Order button for the free claim during opening
 	var order_btn: Button = get_node_or_null("UI/OrderButton")
@@ -337,6 +346,17 @@ func start_opening_sequence() -> void:
 		_opening_order_button_original_text = order_btn.text
 		order_btn.text = "CLAIM COMPLIMENTARY SHIPMENT (FREE!)"
 		# style it more "ad like" temporarily if wanted
+
+	# Introduce reusable comic panel placeholder for the current phase (65% screen, 4-panel layout).
+	# This will be reused for future tutorial / phase descriptions.
+	# Each panel now includes clear "how to play" instructions.
+	var phase1_texts: Array[String] = [
+		"1. THE AD IS YOUR SHOP\nThe comic catalog calls from the void. Click the ORDER button (or ad area) to begin your run and receive the exotic egg kit.",
+		"2. INCUBATE & CLAIM\nAn egg drops into the tank. Watch it pulse and incubate. Click CLAIM COMPLIMENTARY SHIPMENT to drop food – this reduces the hatch timer!",
+		"3. THE LARVA HATCHES\nYour Freaky Goldfish emerges. It is aggressive and prefers medium packets. It will swim and bump food on its own to eat (no clicking needed to feed).",
+		"4. CLICK THE GLOBS\nEach bite releases floating globs. Click them in the tank to collect Insight, Biomatter and Shards. This is active tending!"
+	]
+	_comic_panel = _create_comic_panel("PHASE 1: THE EXOTIC ARRIVAL", phase1_texts)
 
 	# Spawn the egg from the "ad" (top centerish)
 	if egg_scene == null:
@@ -383,6 +403,143 @@ func _create_incubation_ui() -> void:
 	_incubating_bar.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	ui_layer.add_child(_incubating_bar)
 
+# Reusable placeholder comic panel UI for tutorial / phase descriptions.
+# Single panel ~65% of screen space, quartered into 4 text panels (2x2 comic layout).
+# Call with different texts for future phases. Styled with comic borders (StyleBoxFlat) and paper tones.
+# Includes a close button. Each panel now has clear "how to play" instructions for the current phase.
+func _create_comic_panel(phase_title: String, panel_texts: Array[String]) -> Control:
+	var ui_layer := get_node_or_null("UI")
+	if ui_layer == null:
+		return null
+
+	var vp := get_viewport_rect().size
+	var panel_size := vp * 0.65
+
+	# Main comic frame as Panel with proper StyleBox for clean borders (fixes weird left-side artifacts from layered ColorRects)
+	var comic := Panel.new()
+	comic.name = "ComicPanelPlaceholder"
+	comic.custom_minimum_size = panel_size
+	comic.size = panel_size
+	comic.set_anchors_preset(Control.PRESET_CENTER)
+	comic.position = -panel_size / 2
+
+	# Comic-style outer border + paper background
+	var outer_style := StyleBoxFlat.new()
+	outer_style.bg_color = Color(0.92, 0.88, 0.78)  # aged paper
+	outer_style.border_width_left = 8
+	outer_style.border_width_right = 8
+	outer_style.border_width_top = 8
+	outer_style.border_width_bottom = 8
+	outer_style.border_color = Color(0.08, 0.06, 0.05)  # thick black comic border
+	comic.add_theme_stylebox_override("panel", outer_style)
+
+	# Inner margin container for padding
+	var margin := MarginContainer.new()
+	margin.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	margin.add_theme_constant_override("margin_left", 12)
+	margin.add_theme_constant_override("margin_top", 12)
+	margin.add_theme_constant_override("margin_right", 12)
+	margin.add_theme_constant_override("margin_bottom", 12)
+	comic.add_child(margin)
+
+	# Content VBox: header (title + close) then the 2x2 grid
+	var vbox := VBoxContainer.new()
+	vbox.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	margin.add_child(vbox)
+
+	# Header row: title + close button
+	var header := HBoxContainer.new()
+	header.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	vbox.add_child(header)
+
+	var title := Label.new()
+	title.text = phase_title
+	title.add_theme_font_size_override("font_size", 18)
+	title.add_theme_color_override("font_color", Color(0.08, 0.06, 0.05))
+	title.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	header.add_child(title)
+
+	var close_btn := Button.new()
+	close_btn.text = "X"
+	close_btn.custom_minimum_size = Vector2(32, 28)
+	close_btn.add_theme_font_size_override("font_size", 14)
+	close_btn.add_theme_color_override("font_color", Color.WHITE)
+
+	# Comic button style
+	var btn_style := StyleBoxFlat.new()
+	btn_style.bg_color = Color(0.15, 0.12, 0.18)
+	btn_style.border_width_left = 2
+	btn_style.border_width_right = 2
+	btn_style.border_width_top = 2
+	btn_style.border_width_bottom = 2
+	btn_style.border_color = Color(0.4, 0.35, 0.45)
+	close_btn.add_theme_stylebox_override("normal", btn_style)
+
+	var btn_hover := btn_style.duplicate() as StyleBoxFlat
+	btn_hover.bg_color = Color(0.25, 0.2, 0.3)
+	close_btn.add_theme_stylebox_override("hover", btn_hover)
+
+	header.add_child(close_btn)
+
+	# 2x2 grid for the four comic panels
+	var grid := GridContainer.new()
+	grid.columns = 2
+	grid.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	grid.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	vbox.add_child(grid)
+
+	# Calculate approximate cell size so each quarter gets a full text box area
+	# (prevents text shrinking to a narrow left column)
+	var content_w := panel_size.x - 36.0
+	var content_h := panel_size.y - 80.0
+	var cell_w := content_w / 2.0
+	var cell_h := content_h / 2.0
+
+	for i in 4:
+		var sub := Panel.new()
+		sub.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		sub.size_flags_vertical = Control.SIZE_EXPAND_FILL
+		sub.custom_minimum_size = Vector2(cell_w, cell_h)
+
+		# Sub-panel comic style (paper + black border)
+		var sub_style := StyleBoxFlat.new()
+		sub_style.bg_color = Color(0.98, 0.96, 0.9)
+		sub_style.border_width_left = 4
+		sub_style.border_width_right = 4
+		sub_style.border_width_top = 4
+		sub_style.border_width_bottom = 4
+		sub_style.border_color = Color(0.08, 0.06, 0.05)
+		sub.add_theme_stylebox_override("panel", sub_style)
+
+		# Inner margin container that fills the sub-panel (creates the full text box area)
+		var sub_margin := MarginContainer.new()
+		sub_margin.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+		sub_margin.add_theme_constant_override("margin_left", 12)
+		sub_margin.add_theme_constant_override("margin_top", 10)
+		sub_margin.add_theme_constant_override("margin_right", 12)
+		sub_margin.add_theme_constant_override("margin_bottom", 10)
+		sub.add_child(sub_margin)
+
+		# The text label now fills the entire inner box (full text box per quarter)
+		var txt := Label.new()
+		txt.text = panel_texts[i] if i < panel_texts.size() else ""
+		txt.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		txt.add_theme_font_size_override("font_size", 12)
+		txt.add_theme_color_override("font_color", Color(0.08, 0.06, 0.05))
+		txt.size_flags_vertical = Control.SIZE_EXPAND_FILL
+		txt.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		# Force the label rect to use the full space provided by the margin container
+		txt.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+		sub_margin.add_child(txt)
+
+		grid.add_child(sub)
+
+	# Close button action: remove the panel (reusable for any phase)
+	close_btn.pressed.connect(comic.queue_free)
+
+	ui_layer.add_child(comic)
+	return comic
+
 func _update_incubation_ui() -> void:
 	if _egg_node and _egg_node.has_method("get_remaining_time") and _incubating_bar:
 		var remaining: float = _egg_node.get_remaining_time()
@@ -403,7 +560,7 @@ func _claim_complimentary_shipment() -> void:
 	if _complimentary_claimed or not _in_opening:
 		return
 
-	print("[AquariumController] Claiming complimentary shipment for the opening (unique starter packets).")
+	# print("[AquariumController] Claiming complimentary shipment for the opening (unique starter packets).")  # cleared for resource debug focus
 
 	# Force the next drop (the one we just spawned or direct) to use starters.
 	_force_starter_next_drop = true
@@ -462,7 +619,7 @@ func _spawn_starter_packets(at_position: Vector2) -> void:
 		packet.bites_to_consume = bites
 		packet.insight_value = bites
 		packet.remaining_bites = bites
-		packet.biomass_value = bites  # for any legacy
+		packet.biomass_value = bites
 
 		# Force the special starter type (bypass random in Organ._ready)
 		if packet.has_method("set_organ_type"):
@@ -472,20 +629,27 @@ func _spawn_starter_packets(at_position: Vector2) -> void:
 			if packet.has_method("_update_visual_for_type"):
 				packet.call("_update_visual_for_type")
 
+		# Mark as the gold starter's matched "medium" food (minimal size hint per plan).
+		# This + Pet preference bias gives the Freaky Goldfish an early taste of its playstyle.
+		if packet.has_method("set_size_category"):
+			packet.set_size_category("medium")
+		else:
+			packet.set("size_category", "medium")
+
 		# Apply impulse for physics-based explosion: short distance in different directions, upward bias for arc
 		# (see normal organs for notes on no-gravity + bounce + resistance behavior)
 		# Increased for more travel (organs were stopping too close to drop point).
 		var impulse = Vector2(randf_range(-200, 200), randf_range(-300, -50)).normalized() * randf_range(350, 550)
 		packet.apply_impulse(impulse)
 
-	print("[AquariumController] Spawned 2 unique starter packets at ", at_position)
+	# print("[AquariumController] Spawned 2 unique starter (medium) packets at ", at_position)  # cleared for resource debug focus
 
 # Called from Egg when its timer hits zero (or was reduced to zero).
 func hatch_egg_at(pos: Vector2) -> void:
 	if not _in_opening or _egg_node == null:
 		return
 
-	print("[AquariumController] Hatching the first Sea Monkey larva...")
+	# print("[AquariumController] Hatching the Freaky Goldfish (gold starter larva)...")  # cleared for resource debug focus
 
 	# Clean incubation UI
 	if _incubating_label:
@@ -495,18 +659,20 @@ func hatch_egg_at(pos: Vector2) -> void:
 		_incubating_bar.queue_free()
 		_incubating_bar = null
 
-	# Spawn the special first pet (larva Sea Monkey) - eager, special name
+	# Spawn the special first pet (larva Freaky Goldfish) - eager gold starter, distinct primitive
 	if pet_scene:
 		var larva: Node = pet_scene.instantiate()
 		_pets_layer.add_child(larva)
 		larva.global_position = pos + Vector2(0, 20)  # slightly below egg
 
-		# Configure as the iconic starter *before* initialize so larval eager logic runs
+		# Configure as the gold starter *before* initialize so larval eager + preference logic runs
 		if "pet_name" in larva:
-			larva.pet_name = "Sea Monkey"
+			larva.pet_name = "Freaky Goldfish"
 		if "current_stage" in larva:
 			larva.current_stage = GameEnums.EvolutionStage.LARVAL
-		# Make the larva more driven for the demo (we enhance seeking in Pet.gd)
+		if "species" in larva:
+			larva.species = GameEnums.PetSpecies.FREAKY_GOLDFISH
+		# Make the larva more driven (aggressive goldfish baseline; we enhance seeking in Pet.gd)
 		if "swim_speed" in larva:
 			larva.swim_speed = 85.0
 
@@ -526,14 +692,19 @@ func hatch_egg_at(pos: Vector2) -> void:
 func _restore_normal_ui_after_hatch() -> void:
 	var instr: Label = get_node_or_null("UI/Instructions")
 	if instr:
-		instr.text = "SPACE or Order button: drop container\nWatch your larva seek & eat the starter packets (collisions!)\nEarn Insight only when pets eat."
+		instr.text = "SPACE or Order button: drop container\nWatch your Freaky Goldfish seek & eat the medium packets (collisions!)\nClick the released globs to collect Insight, Biomatter and Shards (they fly to the HUD)."
 
 	var order_btn: Button = get_node_or_null("UI/OrderButton")
 	if order_btn:
 		order_btn.text = "Order Shipment (Insight)"
 
-	# Optional: small comic popup "The kit is alive!"
-	_spawn_floating_text("THE SEA MONKEY LIVES!", Vector2(0, 60), Color(0.7, 0.9, 0.6), 2.2)
+	# Optional: small comic popup for the gold starter hatch
+	_spawn_floating_text("THE GOLDFISH LIVES!", Vector2(0, 60), Color(0.95, 0.82, 0.4), 2.2)
+
+	# Remove the phase comic panel if still present (the close button also frees it; this is a safety net for later phases)
+	if _comic_panel and is_instance_valid(_comic_panel):
+		_comic_panel.queue_free()
+		_comic_panel = null
 
 func _create_fallback_egg() -> void:
 	# Rare fallback if no Egg scene - primitive egg using same logic as indicator
@@ -542,7 +713,7 @@ func _create_fallback_egg() -> void:
 	_entities_layer.add_child(_egg_node)
 	_egg_node.global_position = Vector2(0, tank_top_y - 50)
 	# For brevity, the real Egg.gd is preferred; this just prevents crash.
-	print("[AquariumController] Using fallback egg (add Egg.tscn to avoid).")
+	# print("[AquariumController] Using fallback egg (add Egg.tscn to avoid).")  # cleared for resource debug focus
 
 # Simple floating comic-style text (MUNCH!, +Insight, CRACK!, etc.)
 func _spawn_floating_text(text: String, world_pos: Vector2, color: Color = Color(1, 0.95, 0.7), lifetime: float = 1.6) -> void:
@@ -623,10 +794,69 @@ func world_to_screen(world_pos: Vector2) -> Vector2:
 	var cam_inv := cam.get_global_transform().affine_inverse()
 	return canvas_xform * cam_inv * world_pos
 
-# Spawn a floating resource indicator using the insight icon (starts 10x10, lerps scale to 35x35 as it flies to the UI label which is also 35x35).
-# Multiple icon particles for juicy feel, plus the +amount number.
-# The value increase happens via the manager add_resource (which also triggers UI label update + pop).
-func _spawn_floating_resource(world_pos: Vector2, text: String = "+1", color: Color = Color(0.4, 0.85, 1.0), lifetime: float = 1.0) -> void:
+func spawn_resource_glob(world_pos: Vector2, amount: int, res_type: GameEnums.ResourceType) -> void:
+	if resource_glob_scene == null or amount <= 0:
+		return
+
+	var glob: Node = resource_glob_scene.instantiate()
+	_entities_layer.add_child(glob)
+	glob.global_position = world_pos
+	if has_method("clamp_to_tank"):
+		glob.global_position = clamp_to_tank(glob.global_position)
+
+	var icon_tex: Texture2D = null
+	var fly_color := Color(0.4, 0.85, 1.0)
+	if res_type == GameEnums.ResourceType.ELDRITCH_INSIGHT:
+		icon_tex = insight_icon_texture
+		fly_color = Color(0.4, 0.85, 1.0)
+	elif res_type == GameEnums.ResourceType.ABYSSAL_BIOMATTER:
+		icon_tex = biomatter_icon_texture
+		fly_color = Color(0.35, 0.78, 0.45)
+	elif res_type == GameEnums.ResourceType.FORGOTTEN_MNEMONIC_SHARDS:
+		icon_tex = load("res://assets/sprites/icons/forgotten_mnemonics_icon.png")
+		fly_color = Color(0.9, 0.7, 0.4)
+
+	if glob.has_method("initialize"):
+		glob.initialize(res_type, amount, icon_tex, self)
+		if res_type == GameEnums.ResourceType.ELDRITCH_INSIGHT:
+			print("[DEBUG] Spawned Insight glob value=%d" % amount)
+		elif res_type == GameEnums.ResourceType.ABYSSAL_BIOMATTER:
+			print("[DEBUG] Spawned Biomatter glob value=%d" % amount)
+		elif res_type == GameEnums.ResourceType.FORGOTTEN_MNEMONIC_SHARDS:
+			print("[DEBUG] Spawned Shards glob value=%d" % amount)
+
+	if glob.has_method("apply_impulse"):
+		var kick := Vector2(randf_range(-1, 1), randf_range(-1, 1)).normalized() * randf_range(25, 55)
+		glob.apply_impulse(kick)
+
+# Called by a ResourceGlob when the player clicks it (or on auto-timeout).
+# The glob carries its 'amount' (the released resource value, e.g. 1 for per-bite in the first cycle).
+# This starts the flying visual animation (passing the blob's value).
+# The actual add_resource (and UI update to e.g. "I:xx") happens on arrival at the HUD label
+func on_resource_glob_collected(glob_node: Node, amt: int, typ: int) -> void:
+	if typ == GameEnums.ResourceType.ELDRITCH_INSIGHT:
+		print("[DEBUG] Insight glob clicked/collected, value=%d - starting fly to UI" % amt)
+	elif typ == GameEnums.ResourceType.ABYSSAL_BIOMATTER:
+		print("[DEBUG] Biomatter glob clicked/collected, value=%d - starting fly to UI" % amt)
+	elif typ == GameEnums.ResourceType.FORGOTTEN_MNEMONIC_SHARDS:
+		print("[DEBUG] Shards glob clicked/collected, value=%d - starting fly to UI" % amt)
+	var fly_color := Color(0.4, 0.85, 1.0)
+	var fly_tex := insight_icon_texture
+	if typ == GameEnums.ResourceType.ELDRITCH_INSIGHT:
+		fly_color = Color(0.4, 0.85, 1.0)
+		fly_tex = insight_icon_texture
+	elif typ == GameEnums.ResourceType.ABYSSAL_BIOMATTER:
+		fly_color = Color(0.35, 0.78, 0.45)
+		fly_tex = biomatter_icon_texture
+	elif typ == GameEnums.ResourceType.FORGOTTEN_MNEMONIC_SHARDS:
+		fly_color = Color(0.9, 0.7, 0.4)
+		fly_tex = load("res://assets/sprites/icons/forgotten_mnemonics_icon.png")
+	if has_method("_spawn_floating_resource"):
+		_spawn_floating_resource(glob_node.global_position if is_instance_valid(glob_node) else global_position, "+%d" % amt, fly_color, 1.0, fly_tex, amt, typ)
+	elif has_method("_spawn_floating_text"):
+		_spawn_floating_text("+%d" % amt, glob_node.global_position if is_instance_valid(glob_node) else global_position, fly_color, 0.9)
+
+func _spawn_floating_resource(world_pos: Vector2, text: String = "+1", color: Color = Color(0.4, 0.85, 1.0), lifetime: float = 1.0, icon_tex_override: Texture2D = null, collect_amt: int = 0, collect_typ: int = -1) -> void:
 	var ui_layer := get_node_or_null("UI")
 	if ui_layer == null:
 		_spawn_floating_text(text, world_pos, color, lifetime)
@@ -634,20 +864,17 @@ func _spawn_floating_resource(world_pos: Vector2, text: String = "+1", color: Co
 
 	var start_screen := world_to_screen(world_pos)
 	var target_pos := start_screen + Vector2(0, -100)
-	# Get the actual label node by path (stable) rather than relying on the @export var on the script (which may not be visible via "as Control" or .prop access).
 	var bl := ui_layer.get_node_or_null("ResourceDisplay/Margin/HBox/biomass_label") as Label
 	if bl:
 		target_pos = bl.global_position - Vector2(18, 0)
 
-	# Use insight icon instead of primitive ColorRect for released insight particles.
-	# Start at 10x10, lerp scale up to 35x35 (3.5x) as it moves to the UI label (which will be 35x35).
-	var insight_tex := insight_icon_texture
+	var use_tex := icon_tex_override if icon_tex_override != null else insight_icon_texture
 	var num_blobs := 3
 	for i in range(num_blobs):
 		var blob: Control
-		if insight_tex == null:
+		if use_tex == null:
 			blob = ColorRect.new()
-			var sz := 8 + randi() % 6
+			var sz := 16 + randi() % 12
 			blob.size = Vector2(sz, sz)
 			blob.color = color
 			blob.modulate = Color(1, 1, 1, 0.85 + randf() * 0.15)
@@ -655,37 +882,32 @@ func _spawn_floating_resource(world_pos: Vector2, text: String = "+1", color: Co
 			blob.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		else:
 			blob = TextureRect.new()
-			(blob as TextureRect).texture = insight_tex
+			(blob as TextureRect).texture = use_tex
 			(blob as TextureRect).expand_mode = TextureRect.EXPAND_IGNORE_SIZE
-			(blob as TextureRect).custom_minimum_size = Vector2(10, 10)
-			blob.size = Vector2(10, 10)
+			(blob as TextureRect).custom_minimum_size = Vector2(20, 20)
+			blob.size = Vector2(20, 20)
 			blob.modulate = Color(1, 1, 1, 0.9 + randf() * 0.1)
 			blob.z_index = 50
 			blob.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		ui_layer.add_child(blob)
 
-		# slight random start offset around the world pos
 		var offset := Vector2(randf_range(-12, 12), randf_range(-8, 8))
 		blob.position = start_screen + offset - blob.size / 2
 
 		var life := lifetime * (0.85 + randf() * 0.3)
 		var t := create_tween()
 		t.set_parallel(true)
-		# use quad ease out for nicer "float up and arc toward" feel
 		t.set_trans(Tween.TRANS_QUAD)
 		t.set_ease(Tween.EASE_OUT)
-		# slight variation in target for spread
 		var tpos := target_pos + Vector2(randf_range(-8, 8), randf_range(-4, 4))
 		t.tween_property(blob, "position", tpos, life)
 		t.tween_property(blob, "modulate:a", 0.0, life * 0.55).set_delay(life * 0.35)
-		if insight_tex != null:
-			# Lerp scale from 1x (10x10) to 3.5x (35x35) as it approaches the label
+		if use_tex != null:
 			t.tween_property(blob, "scale", Vector2(3.5, 3.5), life)
 		else:
 			t.tween_property(blob, "scale", Vector2(0.3, 0.3), life * 0.4).set_delay(life * 0.45)
 		t.tween_callback(blob.queue_free).set_delay(life)
 
-	# The +N number label that flies to the UI label (core "insight gained" visual)
 	var num_label := Label.new()
 	num_label.text = text
 	num_label.modulate = Color(0.7, 1.0, 0.85, 1.0)
@@ -702,11 +924,15 @@ func _spawn_floating_resource(world_pos: Vector2, text: String = "+1", color: Co
 	t2.tween_property(num_label, "position", tpos2 - Vector2(4, 4), lifetime)
 	t2.tween_property(num_label, "modulate:a", 0.0, lifetime * 0.6).set_delay(lifetime * 0.35)
 	t2.tween_property(num_label, "scale", Vector2(0.6, 0.6), lifetime * 0.5).set_delay(lifetime * 0.4)
+	if collect_amt > 0 and collect_typ >= 0:
+		t2.tween_callback(Callable(self, "_finalize_resource_collection").bind(collect_amt, collect_typ)).set_delay(lifetime)
 	t2.tween_callback(num_label.queue_free).set_delay(lifetime)
 
-# === TITLE SCREEN INTEGRATION (pure shape UI) ===
+func _finalize_resource_collection(amt: int, typ: int):
+	print("[DEBUG] Finalize: adding blob value=%d for type=%s (reaches UI)" % [amt, GameEnums.ResourceType.keys()[typ] if typ in GameEnums.ResourceType.values() else str(typ)])
+	if _game_manager and _game_manager.has_method("add_resource"):
+		_game_manager.add_resource(typ, amt)
 
-## Call this to return to the title screen. Can be wired from a menu button.
 func return_to_title() -> void:
 	get_tree().change_scene_to_file("res://scenes/TitleScreen.tscn")
 

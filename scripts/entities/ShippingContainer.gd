@@ -1,9 +1,3 @@
-# scripts/entities/ShippingContainer.gd
-# A physical shipping container that drops into the tank.
-# On click: plays open animation then requests the AquariumController to spawn organs.
-#
-# Current implementation uses Node2D + Tween for reliable "drop" behavior.
-# Alternative: Inherit from RigidBody2D for full physics (add collision shape + gravity scale).
 extends Node2D
 
 @export var drop_duration: float = 1.2
@@ -88,7 +82,7 @@ func _drop() -> void:
 	impact_tween.tween_property(_visual, "scale", Vector2(1.15, 0.85), 0.08)
 	impact_tween.tween_property(_visual, "scale", Vector2.ONE, 0.2)
 
-	print("[ShippingContainer] Landed. Click to open.")
+	# print("[ShippingContainer] Landed. Click to open.")  # cleared for resource debug focus
 
 func _on_area_input_event(_viewport: Node, event: InputEvent, _shape_idx: int) -> void:
 	if _is_opened:
@@ -101,7 +95,7 @@ func _on_area_input_event(_viewport: Node, event: InputEvent, _shape_idx: int) -
 				_pressed_on_me = true
 			else:
 				if _pressed_on_me:
-					print("[ShippingContainer] Click detected on area, opening...")
+					# print("[ShippingContainer] Click detected on area, opening...")  # cleared for resource debug focus
 					open()
 					_pressed_on_me = false
 				get_viewport().set_input_as_handled()
@@ -111,7 +105,7 @@ func open() -> void:
 		return
 	_is_opened = true
 
-	print("[ShippingContainer] Opening...")
+	# print("[ShippingContainer] Opening...")  # cleared for resource debug focus
 
 	# Visual change
 	if _visual:

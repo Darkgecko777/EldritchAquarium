@@ -1,14 +1,19 @@
-[gd_scene load_steps=3 format=3 uid="uid://aquarium_main"]
+[gd_scene load_steps=5 format=3 uid="uid://aquarium_main"]
 
 [ext_resource type="Script" path="res://scripts/AquariumController.gd" id="1_controller"]
 [ext_resource type="Script" path="res://scripts/ui/ResourceDisplay.gd" id="2_resourcedisplay"]
 [ext_resource type="PackedScene" uid="uid://egg_first" path="res://scenes/entities/Egg.tscn" id="3_egg"]
 [ext_resource type="Texture2D" path="res://assets/sprites/icons/eldritch_insight_icon.png" id="4_insight_icon"]
+[ext_resource type="PackedScene" path="res://scenes/entities/ResourceGlob.tscn" id="5_glob"]
+[ext_resource type="Texture2D" path="res://assets/sprites/icons/abyssal_biomass_icon.png" id="6_biomass_icon"]
+[ext_resource type="Texture2D" path="res://assets/sprites/icons/forgotten_mnemonics_icon.png" id="7_mnemonics_icon"]
 
 [node name="Aquarium" type="Node2D"]
 script = ExtResource("1_controller")
 egg_scene = ExtResource("3_egg")
 insight_icon_texture = ExtResource("4_insight_icon")
+resource_glob_scene = ExtResource("5_glob")
+biomatter_icon_texture = ExtResource("6_biomass_icon")
 
 [node name="Camera2D" type="Camera2D" parent="."]
 position = Vector2(0, 0)
@@ -48,16 +53,18 @@ mouse_filter = 2
 layout_mode = 3
 anchors_preset = 10
 anchor_right = 1.0
-offset_bottom = 60.0
+offset_bottom = 90.0
 grow_horizontal = 2
 mouse_filter = 2
 script = ExtResource("2_resourcedisplay")
 insight_icon = NodePath("Margin/HBox/insight_icon")
 biomass_label = NodePath("Margin/HBox/biomass_label")
+biomatter_icon = NodePath("Margin/HBox/biomatter_icon")
 void_essence_label = NodePath("Margin/HBox/void_label")
 sanity_shards_label = NodePath("Margin/HBox/sanity_label")
 pollution_label = NodePath("Margin/HBox/pollution_label")
 pollution_bar = NodePath("Margin/HBox/pollution_bar")
+mnemonics_icon = NodePath("Margin/HBox/mnemonics_icon")
 
 [node name="Margin" type="MarginContainer" parent="UI/ResourceDisplay"]
 layout_mode = 1
@@ -71,11 +78,11 @@ theme_override_constants/margin_top = 12
 
 [node name="HBox" type="HBoxContainer" parent="UI/ResourceDisplay/Margin"]
 layout_mode = 2
-theme_override_constants/separation = 24
+theme_override_constants/separation = 16
 
 [node name="insight_icon" type="TextureRect" parent="UI/ResourceDisplay/Margin/HBox"]
 layout_mode = 2
-custom_minimum_size = Vector2(35, 35)
+custom_minimum_size = Vector2(70, 70)
 texture = ExtResource("4_insight_icon")
 expand_mode = 1
 stretch_mode = 5
@@ -85,14 +92,28 @@ layout_mode = 2
 text = "0"
 theme_override_font_sizes/font_size = 18
 
+[node name="biomatter_icon" type="TextureRect" parent="UI/ResourceDisplay/Margin/HBox"]
+layout_mode = 2
+custom_minimum_size = Vector2(70, 70)
+texture = ExtResource("6_biomass_icon")
+expand_mode = 1
+stretch_mode = 5
+
 [node name="void_label" type="Label" parent="UI/ResourceDisplay/Margin/HBox"]
 layout_mode = 2
-text = "Void: 0"
+text = "0"
 theme_override_font_sizes/font_size = 18
+
+[node name="mnemonics_icon" type="TextureRect" parent="UI/ResourceDisplay/Margin/HBox"]
+layout_mode = 2
+custom_minimum_size = Vector2(70, 70)
+texture = ExtResource("7_mnemonics_icon")
+expand_mode = 1
+stretch_mode = 5
 
 [node name="sanity_label" type="Label" parent="UI/ResourceDisplay/Margin/HBox"]
 layout_mode = 2
-text = "Sanity: 0"
+text = "0"
 theme_override_font_sizes/font_size = 18
 
 [node name="pollution_label" type="Label" parent="UI/ResourceDisplay/Margin/HBox"]
@@ -113,7 +134,8 @@ offset_top = 80.0
 offset_right = 520.0
 offset_bottom = 140.0
 text = "SPACE or Order button to drop containers
-Watch your pets seek and collide-eat for Insight (the only way to earn!)"
+Watch your Freaky Goldfish seek & eat the medium packets (collisions!)
+Click the released globs to collect Insight, Biomatter and Shards (they fly to the HUD)."
 theme_override_font_sizes/font_size = 16
 modulate = Color(0.8, 0.9, 1, 0.85)
 
@@ -125,7 +147,7 @@ offset_bottom = 200.0
 text = "Order Shipment (Insight)"
 theme_override_font_sizes/font_size = 14
 
-; Small menu button in top-right (primitive shape styled via code)
+[node name="MenuButton" type="Button" parent="UI"]
 [node name="MenuButton" type="Button" parent="UI"]
 layout_mode = 1
 anchors_preset = 1

@@ -1,7 +1,6 @@
-[gd_scene load_steps=3 format=3 uid="uid://pet_base"]
+[gd_scene load_steps=2 format=3 uid="uid://pet_base"]
 
 [ext_resource type="Script" path="res://scripts/entities/Pet.gd" id="1_pet"]
-[ext_resource type="Texture2D" path="res://assets/sprites/pets/starter/eldritch_starter_larval.png" id="2_larval"]
 
 [sub_resource type="CircleShape2D" id="CircleShape2D_1"]
 radius = 30.0
@@ -9,9 +8,9 @@ radius = 30.0
 [node name="Pet" type="CharacterBody2D"]
 script = ExtResource("1_pet")
 
-[node name="Body" type="Sprite2D" parent="."]
-texture = ExtResource("2_larval")
-scale = Vector2(0.052083, 0.052083)
+; Body visual is 100% distinct primitives (multi-part goldfish shape: body + tail fin + eye) created in _ready.
+; No PNG sprites used in this iteration (scrapped to keep fast primitive iteration for the gold starter).
+; The script always authors the visual for clear differentiation from future species (Minnows/Remora) and generic rects.
 
 [node name="InteractArea" type="Area2D" parent="."]
 

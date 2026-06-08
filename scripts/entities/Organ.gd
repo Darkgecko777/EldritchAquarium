@@ -1,17 +1,19 @@
-# scripts/entities/Organ.gd
-# An organ / loot piece released from a shipping container.
-# Player can click to collect. Later we can support drag-to-feed directly onto pets.
 extends RigidBody2D
 
 @export var type: GameEnums.OrganType = GameEnums.OrganType.TENTACLE
-@export var biomass_value: int = 5  # Legacy value for direct collection (economy no longer uses this for Insight). Starter packets may use different values or a separate system.
+@export var biomass_value: int = 5
 @export var insight_value: int = 5
 @export var bites_to_consume: int = 4
 
+# Minimal size category for the initial gold starter playloop (previews Medium preference).
+# "medium" for the Goldfish's complimentary starter packets (larger visual + future match bonus).
+# Other values: "small", "large". Normal organs default "medium" or random for now.
+@export var size_category: String = "medium"
+
 @export_group("Physics")
-@export var buoyancy: float = 0.0  # upward force for floating (only useful if gravity_scale > 0). 0 = neutral "no gravity" floating.
-@export var tank_resistance: float = 1.0  # linear_damp - generic resistance/drag of the tank liquid. Lower = organs travel/bounce farther from their spawn origin before damping to rest.
-@export var angular_resistance: float = 2.8  # angular_damp - how quickly spinning resists.
+@export var buoyancy: float = 0.0
+@export var tank_resistance: float = 1.0
+@export var angular_resistance: float = 2.8
 
 var _game_manager: Node
 var _controller: Node
@@ -45,6 +47,9 @@ func _ready() -> void:
 	remaining_bites = bites_to_consume
 	if _visual:
 		_visual.scale = Vector2(1, 1)
+
+	# Apply size_category to initial visual scale for the gold starter medium packets (and future mixed sizes).
+	_apply_size_visual()
 
 	# Physics props (can override per instance in spawn)
 	# No gravity: organs are "weightless" in the tank and only move from explosion impulse,
@@ -107,11 +112,11 @@ func _update_visual_for_type() -> void:
 			_visual.color = Color(0.3, 0.6, 0.5)
 			_visual.size = Vector2(22, 18)
 		GameEnums.OrganType.STARTER_PRIMAL:
-			# Unique "incubation packet" for the very first egg - gooey green starter food
+			# Unique "incubation packet" for the very first egg - medium food for the gold starter (Freaky Goldfish).
 			_visual.color = Color(0.25, 0.58, 0.22)
-			_visual.size = Vector2(30, 24)  # chunkier
+			_visual.size = Vector2(30, 24)  # chunkier base (will be further scaled by size_category)
 		GameEnums.OrganType.STARTER_VOID:
-			# Unique "incubation packet" - eerie purple void kelp / broth
+			# Unique "incubation packet" - eerie purple void kelp / broth (also medium for gold starter preview).
 			_visual.color = Color(0.48, 0.22, 0.65)
 			_visual.size = Vector2(28, 26)
 			# Slight transparency for "ethereal" packet feel
@@ -120,11 +125,38 @@ func _update_visual_for_type() -> void:
 			_visual.color = Color(0.7, 0.5, 0.6)
 			_visual.size = Vector2(22, 18)
 
+	_apply_size_visual()  # ensure size_category affects final rect size for medium preference preview
+
+# Apply minimal size visual scaling. Starter packets for the gold playloop are "medium" (larger, distinct).
+# This gives immediate visual distinction without a full OrganSize enum yet.
+func _apply_size_visual() -> void:
+	if _visual == null:
+		return
+	var factor := 1.0
+	match size_category:
+		"small":
+			factor = 0.7
+		"large":
+			factor = 1.45
+		"medium", _:
+			factor = 1.15  # slightly larger than generic for the gold starter's matched food
+	_visual.size *= factor
+	# Also bump the collision shape slightly for larger targets (helps distinct "feel" when seeking).
+	var col := get_node_or_null("CollisionShape2D")
+	if col and col.shape is CircleShape2D:
+		(col.shape as CircleShape2D).radius *= factor
+
 ## Force a specific type (used for unique starter packets from complimentary shipment).
 ## Prevents the randomizer and forces visual refresh.
+## Also reapplies size_category (callers set size_category before or after this for the gold starter medium packets).
 func set_organ_type(new_type: GameEnums.OrganType) -> void:
 	type = new_type
 	_update_visual_for_type()  # Tentacle default
+
+## Set size category explicitly (used by AquariumController when spawning the gold starter's medium packets).
+func set_size_category(new_size: String) -> void:
+	size_category = new_size
+	_apply_size_visual()
 
 ## Called by pet on each discrete collision/bump. Shrinks the organ gradually and emits small resource.
 func on_pet_bump(pet: Node = null) -> void:
@@ -135,18 +167,13 @@ func on_pet_bump(pet: Node = null) -> void:
 	if _visual:
 		_visual.scale = Vector2(_shrink_scale, _shrink_scale)
 
-	# Emit the resource released per bite
 	var amount := 1
 	if insight_value > 0 and bites_to_consume > 0:
 		amount = max(1, insight_value / bites_to_consume)
-	if _game_manager:
-		_game_manager.add_resource(GameEnums.ResourceType.ELDRITCH_INSIGHT, amount)
-	# Juicy feedback: the released insight flies from the bite location up to the UI Insight label.
-	# This + the label pop + resource update is the core "earned" feedback.
-	if _controller and _controller.has_method("_spawn_floating_resource"):
-		_controller._spawn_floating_resource(global_position, "+%d" % amount, Color(0.4, 0.85, 1.0), 1.1)
+
+	if _controller and _controller.has_method("spawn_resource_glob"):
+		_controller.spawn_resource_glob(global_position, amount, GameEnums.ResourceType.ELDRITCH_INSIGHT)
 	elif _controller and _controller.has_method("_spawn_floating_text"):
-		# Fallback
 		_controller._spawn_floating_text("+%d" % amount, global_position - Vector2(0, 15), Color(0.4, 0.85, 1.0), 0.9)
 
 func get_remaining_bites() -> int:
@@ -186,21 +213,14 @@ func collect(legacy: bool = true) -> void:
 		# Per v1.3 strict vision: direct collection grants NOTHING to the economy.
 		# Food is for pets to eat. Only register_pet_consumed_organ (called from Pet on successful collisions) generates Insight.
 		if _game_manager.has_method("add_resource"):
-			_game_manager.add_resource(GameEnums.ResourceType.BIOMASS, biomass_value)  # legacy only, if still used for anything visual
+			_game_manager.add_resource(GameEnums.ResourceType.ABYSSAL_BIOMATTER, biomass_value)
 
-	# TODO: Nice collection particle / sound / floating +X text (in comic style: "SPLORCH!" "FOR THE TANK!" etc. — no +Insight text here)
 	if legacy:
-		print("[Organ] Collected ", GameEnums.OrganType.keys()[type], " (legacy Biomass only — no Insight. Must be eaten by a pet for resources.)")
+		pass
 	else:
-		print("[Organ] Fully consumed by pet.")
+		pass
 
-	# Quick pop + fade out (used both for legacy pickup and final pet consumption)
 	var tween: Tween = create_tween()
 	tween.tween_property(self, "scale", Vector2(1.3, 1.3), 0.08)
 	tween.parallel().tween_property(_visual, "modulate:a", 0.0, 0.25)
 	tween.tween_callback(queue_free)
-
-# Future ideas:
-# - Drag and drop onto a pet to feed directly (bypass inventory)
-# - Different values / special effects per organ type
-# - "Freshness" that decays if left too long

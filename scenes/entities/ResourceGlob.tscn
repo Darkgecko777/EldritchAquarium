@@ -1,0 +1,10 @@
+[gd_scene load_steps=2 format=3 uid="uid://resource_glob"]
+
+[ext_resource type="Script" path="res://scripts/entities/ResourceGlob.gd" id="1_glob"]
+
+[node name="ResourceGlob" type="Node2D"]
+script = ExtResource("1_glob")
+
+; Visuals and click area are built in the script as lightweight primitives / icon rects.
+; This keeps everything sprite-free for the current iteration and easy to theme per resource type (Insight blue-ish, Biomatter green-ish).
+; Globs float gently in the tank and must be clicked by the player to collect (then fly to UI with the existing juicy effect).

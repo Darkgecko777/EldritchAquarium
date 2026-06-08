@@ -1,17 +1,16 @@
-# scripts/ui/ResourceDisplay.gd
-# Simple HUD element that displays current resources and pollution.
-# Attach to a Control (CanvasLayer or inside UI scene) and assign labels in the inspector.
-# This is intentionally basic — replace with themed panels, icons, and animations later.
 extends Control
 
 @export_group("Labels (assign in inspector)")
-@export var insight_icon: TextureRect  # 35x35 insight icon as primary visual for Eldritch Insight
-@export var biomass_label: Label  # Value label for insight (number to the right of icon)
+@export var insight_icon: TextureRect
+@export var biomass_label: Label
 @export var void_essence_label: Label
 @export var sanity_shards_label: Label
-@export var pollution_label: Label  # Could be a ProgressBar instead / in addition
+@export var pollution_label: Label
 
 @export var pollution_bar: ProgressBar
+
+@export var biomatter_icon: TextureRect
+@export var mnemonics_icon: TextureRect
 
 var _game_manager: Node
 
@@ -20,10 +19,9 @@ var _sanity_shown := false
 
 var _last_insight: int = 0
 
-# Cache the resource types to avoid any potential lookup issues and for clarity
 const InsightType := GameEnums.ResourceType.ELDRITCH_INSIGHT
-const VoidType := GameEnums.ResourceType.VOID_ESSENCE
-const SanityType := GameEnums.ResourceType.SANITY_SHARDS
+const BiomatterType := GameEnums.ResourceType.ABYSSAL_BIOMATTER
+const ShardsType := GameEnums.ResourceType.FORGOTTEN_MNEMONIC_SHARDS
 
 func _ready() -> void:
 	_game_manager = get_node_or_null("/root/GameManager")
@@ -31,28 +29,50 @@ func _ready() -> void:
 		printerr("ResourceDisplay could not find GameManager.")
 		return
 
-	# Insight icon always visible (35x35), value label next to it
+	print("[DEBUG] ResourceDisplay _ready - biomass_label=", biomass_label, " biomatter_icon=", biomatter_icon, " void_essence_label=", void_essence_label, " mnemonics_icon=", mnemonics_icon)
+
+	if biomass_label == null:
+		biomass_label = get_node_or_null("Margin/HBox/biomass_label") as Label
+		print("[DEBUG] Re-got biomass_label in _ready: ", biomass_label)
+	if biomatter_icon == null:
+		biomatter_icon = get_node_or_null("Margin/HBox/biomatter_icon") as TextureRect
+		print("[DEBUG] Re-got biomatter_icon in _ready: ", biomatter_icon)
+	if mnemonics_icon == null:
+		mnemonics_icon = get_node_or_null("Margin/HBox/mnemonics_icon") as TextureRect
+		print("[DEBUG] Re-got mnemonics_icon in _ready: ", mnemonics_icon)
+
 	if insight_icon:
 		insight_icon.visible = true
-		insight_icon.custom_minimum_size = Vector2(35, 35)
+		insight_icon.custom_minimum_size = Vector2(70, 70)
 		insight_icon.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 		insight_icon.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
 	if biomass_label:
 		biomass_label.visible = true
-	# Other resources hidden until first accumulation (per design)
+	if biomatter_icon:
+		biomatter_icon.visible = true
+		biomatter_icon.custom_minimum_size = Vector2(70, 70)
+		biomatter_icon.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+		biomatter_icon.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	if mnemonics_icon:
+		mnemonics_icon.visible = true
+		mnemonics_icon.custom_minimum_size = Vector2(70, 70)
+		mnemonics_icon.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+		mnemonics_icon.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	if void_essence_label == null:
+		void_essence_label = get_node_or_null("Margin/HBox/void_label") as Label
+		print("[DEBUG] Re-got void_essence_label in _ready: ", void_essence_label)
 	if void_essence_label:
-		void_essence_label.visible = false
+		void_essence_label.visible = true
 	if sanity_shards_label:
-		sanity_shards_label.visible = false
-	# Pollution meter can show from the start as it's always relevant
+		sanity_shards_label.visible = true
 	if pollution_label:
 		pollution_label.visible = true
 	if pollution_bar:
 		pollution_bar.visible = true
 
-	# Connect using GDScript signal style
 	if _game_manager.has_signal("resources_changed"):
 		_game_manager.resources_changed.connect(_update_display)
+		print("[DEBUG] ResourceDisplay connected to resources_changed")
 	if _game_manager.has_signal("pollution_changed"):
 		_game_manager.pollution_changed.connect(func(_new_val): _update_display())
 
@@ -62,41 +82,66 @@ func _update_display() -> void:
 	if _game_manager == null:
 		return
 
+	print("[DEBUG] ResourceDisplay _update_display called via signal")
+
+	if biomass_label == null:
+		biomass_label = get_node_or_null("Margin/HBox/biomass_label") as Label
+		print("[DEBUG] Re-got biomass_label in update: ", biomass_label)
+	if biomass_label == null:
+		print("[DEBUG] ERROR: biomass_label still null, cannot update display!")
+		return
+
 	var insight: int = 0
 	if _game_manager and _game_manager.has_method("get_resource"):
 		insight = _game_manager.get_resource(InsightType)
-	if biomass_label:
-		# Primary basic currency is now Eldritch Insight (earned via autonomous pet feeding / collisions).
-		# Value shown to the right of the 35x35 icon.
-		biomass_label.text = "%d" % insight
-		if insight > _last_insight:
-			_juice_label_pop(biomass_label, Color(0.6, 1.0, 0.85))
-			if insight_icon:
-				_juice_icon_pop(insight_icon)
-		_last_insight = insight
+
+	var biom: int = 0
+	if _game_manager and _game_manager.has_method("get_resource"):
+		biom = _game_manager.get_resource(BiomatterType)
+
+	var shards: int = 0
+	if _game_manager and _game_manager.has_method("get_resource"):
+		shards = _game_manager.get_resource(ShardsType)
+
+	print("[DEBUG] ResourceDisplay _update: BEFORE biomass_label.text (current: ", biomass_label.text if biomass_label else "null", ")")
+	biomass_label.text = "%d" % insight
+	print("[DEBUG] ResourceDisplay _update: AFTER biomass_label.text to %d" % insight)
+	if insight > _last_insight:
+		_juice_label_pop(biomass_label, Color(0.6, 1.0, 0.85))
+		if insight_icon:
+			_juice_icon_pop(insight_icon)
+	_last_insight = insight
 	if insight_icon and insight > 0:
-		# Ensure icon is shown once we have insight
 		insight_icon.visible = true
 
-	var v: int = 0
-	if _game_manager and _game_manager.has_method("get_resource"):
-		v = _game_manager.get_resource(VoidType)
+	if biomatter_icon == null:
+		biomatter_icon = get_node_or_null("Margin/HBox/biomatter_icon") as TextureRect
+		print("[DEBUG] Re-got biomatter_icon in update: ", biomatter_icon)
+	if void_essence_label == null:
+		void_essence_label = get_node_or_null("Margin/HBox/void_label") as Label
+		print("[DEBUG] Re-got void_essence_label in update: ", void_essence_label)
+	if biomatter_icon:
+		biomatter_icon.visible = true
 	if void_essence_label:
-		if v > 0:
-			_void_shown = true
-		void_essence_label.visible = _void_shown
-		if _void_shown:
-			void_essence_label.text = "Void: %d" % v
+		void_essence_label.visible = true
+		void_essence_label.text = "%d" % biom
+		if biom > 0:
+			_juice_label_pop(void_essence_label, Color(0.5, 0.9, 0.6))
+			if biomatter_icon:
+				_juice_icon_pop(biomatter_icon)
+		print("[DEBUG] ResourceDisplay _update: Biomatter updated to %d" % biom)
 
-	var s: int = 0
-	if _game_manager and _game_manager.has_method("get_resource"):
-		s = _game_manager.get_resource(SanityType)
+	if mnemonics_icon == null:
+		mnemonics_icon = get_node_or_null("Margin/HBox/mnemonics_icon") as TextureRect
+		print("[DEBUG] Re-got mnemonics_icon in update: ", mnemonics_icon)
 	if sanity_shards_label:
-		if s > 0:
-			_sanity_shown = true
-		sanity_shards_label.visible = _sanity_shown
-		if _sanity_shown:
-			sanity_shards_label.text = "Sanity: %d" % s
+		sanity_shards_label.visible = true
+		sanity_shards_label.text = "%d" % shards
+		if shards > 0:
+			_juice_label_pop(sanity_shards_label, Color(0.8, 0.6, 0.9))
+			if mnemonics_icon:
+				_juice_icon_pop(mnemonics_icon)
+		print("[DEBUG] ResourceDisplay _update: Shards updated to %d" % shards)
 
 	var pollution: float = _game_manager.pollution
 
@@ -105,7 +150,6 @@ func _update_display() -> void:
 
 	if pollution_bar:
 		pollution_bar.value = pollution
-		# Optional: color the bar based on danger level
 		if pollution > 70:
 			pollution_bar.modulate = Color.ORANGE_RED
 		elif pollution > 40:
@@ -113,11 +157,9 @@ func _update_display() -> void:
 		else:
 			pollution_bar.modulate = Color.WHITE
 
-## Juicy feedback when insight (or other) increases: quick scale pop + color flash on the label.
 func _juice_label_pop(label: Label, flash_color: Color = Color(1, 1, 1)) -> void:
 	if label == null:
 		return
-	# Center the scale origin for nicer pop (works for dynamic labels)
 	label.pivot_offset = label.size / 2.0
 	var orig_scale := label.scale
 	var orig_mod := label.modulate
@@ -129,7 +171,6 @@ func _juice_label_pop(label: Label, flash_color: Color = Color(1, 1, 1)) -> void
 		label.modulate = flash_color
 		t.parallel().tween_property(label, "modulate", orig_mod, 0.25)
 
-## Juicy pop for the insight icon (grows slightly then back, with flash).
 func _juice_icon_pop(icon: TextureRect, flash_color: Color = Color(0.6, 1.0, 0.85)) -> void:
 	if icon == null:
 		return
@@ -142,8 +183,3 @@ func _juice_icon_pop(icon: TextureRect, flash_color: Color = Color(0.6, 1.0, 0.8
 	if flash_color != Color(1, 1, 1):
 		icon.modulate = flash_color
 		t.parallel().tween_property(icon, "modulate", orig_mod, 0.25)
-
-# TODO: Add click handlers on resource icons for tooltips or "spend" shortcuts
-# TODO: Animate value changes (count-up instead of instant)
-# TODO: Eldritch styling: dripping text, occasional glitch on high pollution
-# TODO (comic vision): Restyle entire HUD as comic catalog "ledger stamps" / "ACME Void Supply Co." printed receipts. The "Insight" label should feel earned from the tank activity.

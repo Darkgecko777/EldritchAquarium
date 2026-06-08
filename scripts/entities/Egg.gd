@@ -1,8 +1,3 @@
-# scripts/entities/Egg.gd
-# Special egg dropped from the comic ad "Sea Monkey kit" order.
-# Incubates for a base time (~30s). Food/organs arriving in the tank reduce the timer.
-# On hatch: notifies controller to spawn the larval Sea Monkey pet.
-# All primitive visuals for prototype: pulsing "egg" shape + comic incubation label.
 extends Node2D
 
 @export var base_hatch_time: float = 30.0
@@ -55,10 +50,10 @@ func _process(delta: float) -> void:
 		var pulse: float = 1.0 + sin(Time.get_ticks_msec() / 180.0) * (0.03 + progress * 0.08)
 		_shell.scale = _original_scale * pulse
 
-		# Color warms / gets uncanny as it nears hatch (only for primitive)
+		# Color warms / gets uncanny gold as it nears hatch (gold starter egg primitive)
 		if _shell is ColorRect:
-			var base_col := Color(0.85, 0.82, 0.7)
-			var hatch_col := Color(0.6, 0.3, 0.45)
+			var base_col := Color(0.92, 0.82, 0.55)
+			var hatch_col := Color(0.75, 0.35, 0.35)
 			_shell.color = base_col.lerp(hatch_col, progress * 0.7)
 
 func _start_drop_tween() -> void:
@@ -84,29 +79,30 @@ func _start_drop_tween() -> void:
 		settle.tween_property(_shell, "scale", _original_scale * Vector2(1.1, 0.9), 0.1)
 		settle.tween_property(_shell, "scale", _original_scale, 0.25)
 
-	print("[Egg] Landed and incubating.")
+	# print("[Egg] Landed and incubating.")  # cleared for resource debug focus
 
 func _build_primitives() -> void:
 	_shell = get_node_or_null("Shell")
 	if _shell == null:
-		# Outer shell - egg shaped via size + color (fallback primitive)
+		# Distinct golden/eldritch egg primitive for the gold starter (Freaky Goldfish) playloop.
+		# Multi-rect for shape + inner "horror" yolk. Gold tint + slight uncanny shift.
 		_shell = ColorRect.new()
 		_shell.name = "Shell"
-		_shell.size = Vector2(48, 38)
-		_shell.position = Vector2(-24, -19)
-		_shell.color = Color(0.85, 0.82, 0.7)
+		_shell.size = Vector2(46, 36)  # slightly oval proportions
+		_shell.position = Vector2(-23, -18)
+		_shell.color = Color(0.92, 0.82, 0.55)  # warm gold base
 		_shell.pivot_offset = _shell.size / 2
 		_shell.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		add_child(_shell)
 	_original_scale = _shell.scale
 
-	# Inner "yolk" / developing horror hint (only for primitive rect shell)
+	# Inner "yolk" / developing goldfish horror hint (distinct from generic).
 	if _shell is ColorRect:
 		_inner = ColorRect.new()
 		_inner.name = "Inner"
-		_inner.size = Vector2(22, 18)
-		_inner.position = Vector2(-11, -9)
-		_inner.color = Color(0.35, 0.55, 0.3, 0.6)
+		_inner.size = Vector2(20, 16)
+		_inner.position = Vector2(-10, -8)
+		_inner.color = Color(0.55, 0.42, 0.22, 0.65)  # deeper gold/ochre
 		_inner.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		_shell.add_child(_inner)
 
@@ -172,7 +168,7 @@ func _hatch() -> void:
 		return
 	_hatched = true
 
-	print("[Egg] Hatching the Sea Monkey larva!")
+	# print("[Egg] Hatching the Freaky Goldfish (gold starter larva)!")  # cleared for resource debug focus
 
 	# Comic hatch effect
 	if _status_label:
