@@ -35,11 +35,14 @@ var _eats_required_for_larva: int = 1  # one bite per homing session; organ cont
 var _eat_radius: float = 22.0  # distance at which a "collision"/bump is counted
 var _seek_speed_multiplier: float = 1.0  # larva is eager
 
-# Hunger system: individual timers that make pets seek food when hungry
-var hunger: float = 0.0
-var hunger_increase_rate: float = 0.8  # per second; tuned so ~10s between bites for 45-60s total consumption of starters
-var hunger_to_seek: float = 8.0
-var hunger_max: float = 40.0
+# Hunger timer (individual per pet). When >= hunger_timer_max the pet seeks nearest food (organs group).
+# Resets to 0 on consumption (full eat or per-bite for multi-bite organs). Default 5s per spec.
+@export_group("Hunger")
+@export var hunger_timer_max: float = 5.0  # seconds until max hunger; pet seeks nearest food at/after this
+var hunger_timer: float = 0.0
+var _hunger_bar_bg: ColorRect
+var _hunger_bar_fill: ColorRect
+
 var _was_in_eat_range: bool = false  # for counting discrete collisions on enter
 
 func _ready() -> void:
@@ -76,6 +79,8 @@ func _ready() -> void:
 		eye.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		body.add_child(eye)
 
+	_ensure_hunger_bar()
+
 	# Make the pet clickable for future "inspect" or direct feed UI
 	var area: Area2D = Area2D.new()
 	area.name = "InteractArea"
@@ -96,33 +101,36 @@ func initialize(game_manager: Node, controller: Node = null) -> void:
 
 	# Goldfish larva (Freaky Goldfish gold starter) – aggressive, eager for its medium food.
 	# (Future species will branch here on species == GameEnums.PetSpecies.XXX.)
+	# Start with a biased hunger_timer so the larva feels driven (seeks sooner after spawn/hatch).
 	if current_stage == GameEnums.EvolutionStage.LARVAL:
 		if species == GameEnums.PetSpecies.FREAKY_GOLDFISH:
 			_seek_speed_multiplier = 1.4
 			swim_speed = max(swim_speed, 82.0)
-			hunger = 13.0  # start hungry and driven (aggressive baseline)
+			hunger_timer = hunger_timer_max * 0.7  # eager/aggressive baseline
 		else:
 			_seek_speed_multiplier = 1.35
 			swim_speed = max(swim_speed, 78.0)
-			hunger = 12.0
+			hunger_timer = hunger_timer_max * 0.65
 
-	hunger = randf_range(3.0, 10.0)  # individual starting hunger
+	# Individual starting offset so pets don't all sync on the 5s hunger cycle.
+	# Larval goldfish are driven (start part-way through the timer so they seek sooner after hatch).
+	hunger_timer = randf_range(0.6, hunger_timer_max * 0.55)
 	if current_stage == GameEnums.EvolutionStage.LARVAL:
-		hunger = max(hunger, 10.0)
+		hunger_timer = max(hunger_timer, hunger_timer_max * 0.65)
 
 func _physics_process(delta: float) -> void:
 	if _game_manager == null:
 		return
 
-	# Update hunger - individual timer per pet
-	hunger = min(hunger_max, hunger + delta * hunger_increase_rate)
+	# Update hunger timer - individual per pet. At/above max the pet will seek nearest food.
+	hunger_timer = min(hunger_timer_max, hunger_timer + delta)
 
 	_wander_timer -= delta
 	if _wander_timer <= 0.0:
 		_pick_new_wander_target()
 
-	# Only seek food when hungry (or already have a target to finish eating)
-	var hungry := hunger > hunger_to_seek
+	# Only seek food when hunger is at max (or already have a target to finish eating)
+	var hungry := hunger_timer >= hunger_timer_max
 	if hungry or _current_food_target != null:
 		_update_food_target()
 	else:
@@ -185,6 +193,8 @@ func _physics_process(delta: float) -> void:
 		else:
 			_body.position = Vector2(-21, -14 + bob)  # adjusted for our goldfish body size/center
 
+	_update_hunger_bar()
+
 	# TODO: React to high pollution (faster movement, temporary extra "eyes", etc.)
 
 func _pick_new_wander_target() -> void:
@@ -196,8 +206,51 @@ func _pick_new_wander_target() -> void:
 	_wander_target = center + Vector2(cos(angle), sin(angle)) * dist
 	_wander_timer = randf_range(2.5, 5.5)
 
+func _ensure_hunger_bar() -> void:
+	if get_node_or_null("HungerBarBG") != null:
+		return
+	var bg := ColorRect.new()
+	bg.name = "HungerBarBG"
+	bg.size = Vector2(38, 5)
+	bg.position = Vector2(-19, 16)  # tuned under larval goldfish body (body at y~-14 size 28 → bottom around +14)
+	bg.color = Color(0.10, 0.07, 0.05, 0.95)
+	bg.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	add_child(bg)
+	_hunger_bar_bg = bg
+
+	var fill := ColorRect.new()
+	fill.name = "HungerBarFill"
+	fill.size = Vector2(36, 3)
+	fill.position = Vector2(1, 1)
+	fill.color = Color(0.92, 0.62, 0.25)
+	fill.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	bg.add_child(fill)
+	_hunger_bar_fill = fill
+
+func _update_hunger_bar() -> void:
+	if _hunger_bar_fill == null or _hunger_bar_bg == null:
+		return
+	var t: float = 0.0
+	if hunger_timer_max > 0.0:
+		t = clampf(hunger_timer / hunger_timer_max, 0.0, 1.0)
+	_hunger_bar_fill.size.x = 36.0 * t
+	# Subtle hungry shift (amber calm → warning red as hunger maxes)
+	if t >= 0.85:
+		_hunger_bar_fill.color = Color(0.85, 0.28, 0.22)
+	elif t >= 0.55:
+		_hunger_bar_fill.color = Color(0.95, 0.72, 0.25)
+	else:
+		_hunger_bar_fill.color = Color(0.92, 0.62, 0.25)
+	# Keep bar roughly under the (bobbing) body for the primitive goldfish visual
+	if _body:
+		var body_h: float = 14.0
+		if _body is ColorRect:
+			body_h = _body.size.y
+		var body_bottom: float = _body.position.y + body_h + 2.0
+		_hunger_bar_bg.position.y = max(14.0, body_bottom)
+
 func _update_food_target() -> void:
-	var is_hungry := hunger > hunger_to_seek
+	var is_hungry: bool = hunger_timer >= hunger_timer_max
 	if _current_food_target and is_instance_valid(_current_food_target) and not _is_food_collected(_current_food_target):
 		# Check for collision "bump" - count only on ENTERING the radius (discrete collisions)
 		var target := _current_food_target as Node2D
@@ -224,8 +277,8 @@ func _update_food_target() -> void:
 
 			# Small repulsion on bump so it doesn't stick (encourages multiple collisions).
 			# Feed into _bump_kick so the steering lerp smooths it out instead of causing velocity snap/jitter.
-			var t := _current_food_target as Node2D
-			var target_pos := t.global_position if t else global_position
+			var t: Node2D = _current_food_target as Node2D
+			var target_pos: Vector2 = t.global_position if t else global_position
 			var away: Vector2 = (global_position - target_pos).normalized()
 			_bump_kick += away * 55.0  # a bit gentler; steering will blend it nicely
 
@@ -233,8 +286,8 @@ func _update_food_target() -> void:
 			if organ_finished:
 				_eat_current_food()
 			else:
-				# Partial bite on multi-bite organ: sate for now, wander randomly until hunger builds for next bite
-				hunger = 0.0
+				# Partial bite on multi-bite organ: sate (reset timer), wander randomly until hunger timer builds again for next bite
+				hunger_timer = 0.0
 				_current_food_target = null
 				_hits_on_current_food = 0
 				_was_in_eat_range = false
@@ -352,8 +405,8 @@ func _eat_current_food() -> void:
 	if _controller and _controller.has_method("_spawn_floating_text"):
 		_controller._spawn_floating_text("MUNCH!", global_position + Vector2(-20, -30), Color(0.9, 0.85, 0.5), 1.1)
 
-	# Reduce hunger after successful eat (sate after finishing an organ)
-	hunger = 0.0
+	# Reset hunger timer after successful eat (sate after finishing an organ)
+	hunger_timer = 0.0
 
 	_current_food_target = null
 	_hits_on_current_food = 0
@@ -412,8 +465,8 @@ func feed(organ_count: int = 1, skip_consume_register: bool = false) -> void:
 		if _game_manager.has_method("mark_first_pet_hatched") and not _game_manager.first_pet_hatched:
 			_game_manager.mark_first_pet_hatched()
 
-	# Reduce hunger on legacy feed too
-	hunger = max(0.0, hunger - 10.0)
+	# Reset hunger timer on legacy/manual feed too (full sate)
+	hunger_timer = 0.0
 
 	_check_for_evolution()
 
