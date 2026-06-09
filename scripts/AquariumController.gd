@@ -45,6 +45,9 @@ var _incubating_bar: ProgressBar = null  # simple visual timer
 var _force_starter_next_drop: bool = false
 var _comic_panel: Control = null  # Reusable placeholder comic panel for tutorial phases (65% screen, 4-panel layout)
 
+# Pollution death tracking (goldfish at 75%)
+var _goldfish_died_from_pollution: bool = false
+
 # Bottom shipment catalog (6 squares for available shipments as game progresses)
 var _shipment_catalog: Control = null
 var _shipment_slots: Array = []
@@ -193,6 +196,11 @@ func _on_pollution_changed(new_pollution: float) -> void:
 			_game_manager.trigger_madness_event("A faint whisper echoes through the tank... your UI feels watched.")
 		# TODO: Trigger actual visual madness (screen shake, temporary sprite swap, etc.)
 
+	# Goldfish (and future similar starters) die at the 75% Pollution threshold and release a mnemonic fragment.
+	# This is the first concrete "pollution death" implementation (see also Pet.die_from_pollution and design docs).
+	if new_pollution >= 75.0 and not _goldfish_died_from_pollution:
+		_kill_goldfish_at_pollution_threshold()
+
 ## Called by ShippingContainer when it is opened.
 ## Spawns organs at the container's location.
 ## Enhanced to support the opening sequence: complimentary drop uses unique starter packets
@@ -237,6 +245,27 @@ func spawn_organs_from_container(position: Vector2, count: int = 3) -> void:
 		organ.bites_to_consume = 4
 		organ.insight_value = 4
 		organ.remaining_bites = 4
+
+		# Give normal shipments some rarity variety (heavily COMMON for basic drops).
+		# This makes the new size+rarity visual system observable while keeping
+		# the rule that identical size+rarity organs have identical visuals.
+		var r := randf()
+		var chosen_rarity := GameEnums.OrganRarity.COMMON
+		if r < 0.60:
+			chosen_rarity = GameEnums.OrganRarity.COMMON
+		elif r < 0.85:
+			chosen_rarity = GameEnums.OrganRarity.UNCOMMON
+		elif r < 0.96:
+			chosen_rarity = GameEnums.OrganRarity.RARE
+		else:
+			chosen_rarity = GameEnums.OrganRarity.MYTHIC if randf() < 0.7 else GameEnums.OrganRarity.ELDRITCH
+
+		if organ.has_method("set_rarity"):
+			organ.set_rarity(chosen_rarity)
+		else:
+			organ.rarity = chosen_rarity
+			if organ.has_method("_update_visual_for_rarity_and_size"):
+				organ._update_visual_for_rarity_and_size()
 
 	# Any food arrival while egg is active helps it hatch sooner (even normal shipments during opening)
 	if _in_opening and _egg_node and _egg_node.has_method("reduce_timer"):
@@ -301,6 +330,7 @@ func try_feed_held_to_pet(pet: Node) -> void:
 		held_indicator.visible = false
 
 func _spawn_starter_pet() -> void:
+	_goldfish_died_from_pollution = false
 	if pet_scene == null:
 		# print("[AquariumController] No PetScene assigned — skipping starter pet (add one in inspector later).")  # cleared for resource debug focus
 		return
@@ -321,19 +351,36 @@ func _spawn_starter_pet() -> void:
 
 func start_opening_sequence() -> void:
 	_in_opening = true
+	_goldfish_died_from_pollution = false
 
 	# print("[AquariumController] Starting comic ad opening sequence (egg + first shipment auto-drops).")  # cleared for resource debug focus
 
 	# Introduce reusable comic panel placeholder for the current phase (65% screen, 4-panel layout).
 	# All key on-screen text/instructions have been moved into the comic panels.
 	# The first basic shipment now automatically drops in together with the egg (no separate button).
+	# We pass pauses_game=true so the world (including future decay, hunger, physics) is frozen until the player reads and closes.
+	# We also tag it as the opening tutorial so the close handler can start the actual arrival sequence (egg drop etc.).
 	var phase1_texts: Array[String] = [
 		"1. THE AD IS YOUR CATALOG\nThe comic catalog calls from the void. Your exotic starter kit arrives: the egg drops with its first shipment automatically.",
 		"2. INCUBATE\nWatch the egg pulse and incubate in the tank. The first shipment's food arrives with it and reduces the hatch timer as it is released!",
 		"3. THE LARVA HATCHES\nYour Freaky Goldfish emerges. It is aggressive and prefers medium packets. It swims and collides with food on its own to eat (no clicking needed to feed).",
 		"4. CLICK THE GLOBS\nEach bite releases floating globs. Click them in the tank to collect Insight, Biomatter and Shards (they fly to the HUD). Use the bottom Shipment Panel (6 slots) to order more food using Insight."
 	]
-	_comic_panel = _create_comic_panel("PHASE 1: THE EXOTIC ARRIVAL", phase1_texts)
+	_comic_panel = _create_comic_panel("PHASE 1: THE EXOTIC ARRIVAL", phase1_texts, true)
+	if _comic_panel:
+		_comic_panel.set_meta("is_opening_tutorial", true)
+
+	# IMPORTANT: The actual arrival (egg, incubation UI, initial shipment drop + auto open) is deliberately
+	# deferred until the player closes the comic. See _on_tutorial_comic_closed and _begin_opening_arrival.
+	# This satisfies "the game does not start until the tutorial panel is closed".
+	# (Previously this function did the spawns directly; they have been extracted to _begin_opening_arrival.)
+
+# Performs the actual opening arrival now that the player has dismissed the tutorial comic.
+# Spawns the egg, incubation visuals, and triggers the auto first (goldfish starter) shipment.
+# Called from the comic close handler when the opening tutorial meta is present.
+func _begin_opening_arrival() -> void:
+	if not _in_opening:
+		return
 
 	# Spawn the egg from the "ad" (top centerish)
 	if egg_scene == null:
@@ -351,7 +398,9 @@ func start_opening_sequence() -> void:
 	# Create simple incubation UI (comic label + progress) — egg also carries its own world labels
 	_create_incubation_ui()
 
-	# The first shipment automatically drops in with the egg (no button or manual claim required)
+	# The first shipment automatically drops in with the egg (no button or manual claim required).
+	# This path still uses the existing _force_starter_next_drop + container auto-open timer so the two
+	# lowest-rarity goldfish-matched organs are released.
 	_spawn_initial_shipment_with_egg()
 
 func _create_incubation_ui() -> void:
@@ -384,7 +433,9 @@ func _create_incubation_ui() -> void:
 # Single panel ~65% of screen space, quartered into 4 text panels (2x2 comic layout).
 # Call with different texts for future phases. Styled with comic borders (StyleBoxFlat) and paper tones.
 # Includes a close button. Each panel now has clear "how to play" instructions for the current phase.
-func _create_comic_panel(phase_title: String, panel_texts: Array[String]) -> Control:
+# pauses_game: when true, pauses the tree (game does not start / no hunger/physics/decay) and makes the comic interactive (PROCESS_MODE_ALWAYS).
+# Used for the opening tutorial gate + all future threshold comics.
+func _create_comic_panel(phase_title: String, panel_texts: Array[String], pauses_game: bool = false) -> Control:
 	var ui_layer := get_node_or_null("UI")
 	if ui_layer == null:
 		return null
@@ -409,6 +460,13 @@ func _create_comic_panel(phase_title: String, panel_texts: Array[String]) -> Con
 	outer_style.border_width_bottom = 8
 	outer_style.border_color = Color(0.08, 0.06, 0.05)  # thick black comic border
 	comic.add_theme_stylebox_override("panel", outer_style)
+
+	# Tutorial pause support: freeze the game world (pets, hunger, physics, future decay, timers) while the comic is the modal.
+	# The comic (and its close button) must continue processing input and remain interactive.
+	if pauses_game:
+		get_tree().paused = true
+		comic.process_mode = Node.PROCESS_MODE_ALWAYS
+		comic.set_meta("pauses_game", true)
 
 	# Inner margin container for padding
 	var margin := MarginContainer.new()
@@ -511,11 +569,41 @@ func _create_comic_panel(phase_title: String, panel_texts: Array[String]) -> Con
 
 		grid.add_child(sub)
 
-	# Close button action: remove the panel (reusable for any phase)
-	close_btn.pressed.connect(comic.queue_free)
+	# Close button action: use a handler that knows how to resume from tutorial pause (and special-case opening arrival).
+	# The handler will unpause if this comic was responsible for pausing, then free the panel.
+	# For the opening tutorial we also use meta "is_opening_tutorial" (set by caller) to trigger the delayed arrival sequence.
+	close_btn.pressed.connect(Callable(self, "_on_tutorial_comic_closed").bind(comic))
 
 	ui_layer.add_child(comic)
 	return comic
+
+# Handler used by all tutorial comic close buttons.
+# Resumes the game tree if this comic caused a pause (via meta), then frees the panel.
+# If this was the opening tutorial comic, triggers the actual arrival (egg + initial shipment) now that the player has read the instructions.
+func _on_tutorial_comic_closed(comic: Control) -> void:
+	if comic == null or not is_instance_valid(comic):
+		return
+
+	var was_pausing: bool = comic.has_meta("pauses_game") and bool(comic.get_meta("pauses_game"))
+	if was_pausing:
+		get_tree().paused = false
+
+	# Special case for the very first run: the game "does not start" (no drops, no incubation, no timers) until the player closes the comic.
+	if comic.has_meta("is_opening_tutorial") and _in_opening:
+		_begin_opening_arrival()
+
+	comic.queue_free()
+	if _comic_panel == comic:
+		_comic_panel = null
+
+# Helper for places that force-remove the comic (e.g. after hatch) to also unpause if it was a tutorial pauser.
+func _ensure_comic_tutorial_unpause_and_free() -> void:
+	if _comic_panel and is_instance_valid(_comic_panel):
+		var c := _comic_panel
+		_comic_panel = null
+		if c.has_meta("pauses_game") and bool(c.get_meta("pauses_game")):
+			get_tree().paused = false
+		c.queue_free()
 
 func _update_incubation_ui() -> void:
 	if _egg_node and _egg_node.has_method("get_remaining_time") and _incubating_bar:
@@ -534,7 +622,10 @@ func _update_incubation_ui() -> void:
 				_incubating_label.text = "INCUBATING..."
 
 func _spawn_starter_packets(at_position: Vector2) -> void:
-	"""Spawns exactly the two unique starter incubation packets for the first egg/larva."""
+	"""Spawns exactly the two lowest-rarity (COMMON) starter incubation packets (2 insight each) for the goldfish starter pet type.
+	The contents are deliberately linked to the active starter (FREAKY_GOLDFISH) so the first complimentary shipment
+	provides appropriately matched food (medium size + lowest rarity) for the opening experience.
+	"""
 	if organ_scene == null:
 		return
 
@@ -556,20 +647,25 @@ func _spawn_starter_packets(at_position: Vector2) -> void:
 		if packet.has_method("initialize"):
 			packet.initialize(_game_manager, self)
 
-		# Set per organ resource values and bite counts for initial state (2 and 3 insight, 2 and 3 bites)
-		var bites := 2 if i == 0 else 3
-		packet.bites_to_consume = bites
-		packet.insight_value = bites
-		packet.remaining_bites = bites
-		packet.biomass_value = bites
+		# Exactly 2 insight / 2 bites / 2 biomass for both packets per requirement.
+		# These are the "lowest rarity" organs for the goldfish starter shipment.
+		packet.bites_to_consume = 2
+		packet.insight_value = 2
+		packet.remaining_bites = 2
+		packet.biomass_value = 2
 
-		# Force the special starter type (bypass random in Organ._ready)
+		# Force the special starter type (bypass random in Organ._ready) and mark rarity explicitly.
 		if packet.has_method("set_organ_type"):
 			packet.set_organ_type(starter_types[i])
 		else:
 			packet.set("type", starter_types[i])
 			if packet.has_method("_update_visual_for_type"):
 				packet.call("_update_visual_for_type")
+
+		if packet.has_method("set_rarity"):
+			packet.set_rarity(GameEnums.OrganRarity.COMMON)
+		else:
+			packet.set("rarity", GameEnums.OrganRarity.COMMON)
 
 		# Mark as the gold starter's matched "medium" food (minimal size hint per plan).
 		# This + Pet preference bias gives the Freaky Goldfish an early taste of its playstyle.
@@ -584,7 +680,7 @@ func _spawn_starter_packets(at_position: Vector2) -> void:
 		var impulse = Vector2(randf_range(-200, 200), randf_range(-300, -50)).normalized() * randf_range(350, 550)
 		packet.apply_impulse(impulse)
 
-	# print("[AquariumController] Spawned 2 unique starter (medium) packets at ", at_position)  # cleared for resource debug focus
+	# print("[AquariumController] Spawned 2 unique starter (medium, COMMON/lowest-rarity, 2 insight) packets at ", at_position)  # cleared for resource debug focus
 
 # Auto-drop the first (complimentary) shipment together with the opening egg.
 # Spawns the visual ShippingContainer (it performs its drop tween), forces starter packets,
@@ -827,10 +923,40 @@ func _restore_normal_ui_after_hatch() -> void:
 	# Optional: small comic popup for the gold starter hatch
 	_spawn_floating_text("THE GOLDFISH LIVES!", Vector2(0, 60), Color(0.95, 0.82, 0.4), 2.2)
 
-	# Remove the phase comic panel if still present (the close button also frees it; this is a safety net for later phases)
-	if _comic_panel and is_instance_valid(_comic_panel):
-		_comic_panel.queue_free()
-		_comic_panel = null
+	# Remove the phase comic panel if still present (the close button also frees it; this is a safety net for later phases).
+	# Use helper so any tutorial pause is properly resumed.
+	_ensure_comic_tutorial_unpause_and_free()
+
+# Kills any live goldfish (FREAKY_GOLDFISH) pets when Pollution hits the 75% threshold.
+# Grants 1 Forgotten Mnemonic Shard and plays death feedback. Only triggers once per run (flag reset on new opening).
+func _kill_goldfish_at_pollution_threshold() -> void:
+	_goldfish_died_from_pollution = true
+
+	if _pets_layer == null:
+		return
+
+	for child in _pets_layer.get_children():
+		if not is_instance_valid(child):
+			continue
+		# Match the gold starter species (the one that dies via Pollution threshold per design).
+		var is_goldfish := false
+		if "species" in child and child.species == GameEnums.PetSpecies.FREAKY_GOLDFISH:
+			is_goldfish = true
+		if not is_goldfish:
+			continue
+
+		# Grant the fragment (mnemonic on death) and visual feedback.
+		if _game_manager and _game_manager.has_method("add_resource"):
+			_game_manager.add_resource(GameEnums.ResourceType.FORGOTTEN_MNEMONIC_SHARDS, 1)
+
+		var death_pos := (child as Node2D).global_position if child is Node2D else Vector2.ZERO
+		_spawn_floating_text("DIED FROM POLLUTION", death_pos, Color(0.75, 0.35, 0.3), 1.6)
+
+		# Prefer encapsulated death on the pet (handles its own visuals + free); fallback to direct remove.
+		if child.has_method("die_from_pollution"):
+			child.die_from_pollution()
+		else:
+			child.queue_free()
 
 func _create_fallback_egg() -> void:
 	# Rare fallback if no Egg scene - primitive egg using same logic as indicator

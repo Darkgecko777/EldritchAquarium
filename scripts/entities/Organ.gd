@@ -10,6 +10,9 @@ extends RigidBody2D
 # Other values: "small", "large". Normal organs default "medium" or random for now.
 @export var size_category: String = "medium"
 
+# Rarity for shipments / yields / starter linking (lowest = COMMON for goldfish starter shipment).
+@export var rarity: GameEnums.OrganRarity = GameEnums.OrganRarity.COMMON
+
 @export_group("Physics")
 @export var buoyancy: float = 0.0
 @export var tank_resistance: float = 1.0
@@ -26,6 +29,8 @@ var _visual: ColorRect
 var _shrink_scale: float = 1.0  # for gradual consumption on collisions
 var remaining_bites: int = 4
 
+const DECAY_TIME: float = 20.0  # fixed uneaten lifetime before rot adds pollution (small/medium/large = 5/10/15). Tune or make @export later.
+
 func _ready() -> void:
 	_visual = get_node_or_null("Visual")
 	if _visual == null:
@@ -36,20 +41,21 @@ func _ready() -> void:
 		_visual.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		add_child(_visual)
 
-	# Randomize organ type on creation for variety (unless preset in editor or a special starter packet)
+	# Randomize organ type on creation for variety (unless preset in editor or a special starter packet).
+	# Note: type no longer controls the primary visual (color/size). Visuals are driven by
+	# rarity + size_category so that organs with the same size and rarity are identical.
 	var is_starter := type in [GameEnums.OrganType.STARTER_PRIMAL, GameEnums.OrganType.STARTER_VOID]
 	if not is_starter and randf() < 0.7:
 		type = randi() % GameEnums.OrganType.size() as GameEnums.OrganType
 
-	_update_visual_for_type()
+	# Visuals are now determined by size + rarity for consistency:
+	# All organs with the same size_category and rarity look identical at spawn.
+	_update_visual_for_rarity_and_size()
 
 	_shrink_scale = 1.0
 	remaining_bites = bites_to_consume
 	if _visual:
 		_visual.scale = Vector2(1, 1)
-
-	# Apply size_category to initial visual scale for the gold starter medium packets (and future mixed sizes).
-	_apply_size_visual()
 
 	# Physics props (can override per instance in spawn)
 	# No gravity: organs are "weightless" in the tank and only move from explosion impulse,
@@ -92,71 +98,80 @@ func _process(delta: float) -> void:
 		var bob: float = sin(_life_time * 1.8) * 3.0
 		_visual.position.y = -9 + bob
 
+	# Decay / rot for uneaten organs: adds Pollution (size-scaled) then self-destructs.
+	# Only for positive remaining bites (uneaten / not fully consumed) and not already collected.
+	if not _collected and remaining_bites > 0 and _life_time >= DECAY_TIME:
+		_decay_and_rot()
+
 	# Very slight pollution aura when many organs are out (flavor)
 
-func _update_visual_for_type() -> void:
+# Determines the initial visual (color + rect size) based on rarity and size_category.
+# This guarantees that any two organs with identical size + rarity have identical appearance
+# when they first appear ("to begin with"), regardless of their internal OrganType.
+func _update_visual_for_rarity_and_size() -> void:
 	if _visual == null:
 		return
 
-	match type:
-		GameEnums.OrganType.EYE:
-			_visual.color = Color(0.9, 0.3, 0.3)
-			_visual.size = Vector2(22, 18)
-		GameEnums.OrganType.HEART:
-			_visual.color = Color(0.6, 0.1, 0.2)
-			_visual.size = Vector2(22, 18)
-		GameEnums.OrganType.NEURAL_CLUSTER:
-			_visual.color = Color(0.4, 0.8, 0.9)
-			_visual.size = Vector2(22, 18)
-		GameEnums.OrganType.SCALE:
-			_visual.color = Color(0.3, 0.6, 0.5)
-			_visual.size = Vector2(22, 18)
-		GameEnums.OrganType.STARTER_PRIMAL:
-			# Unique "incubation packet" for the very first egg - medium food for the gold starter (Freaky Goldfish).
-			_visual.color = Color(0.25, 0.58, 0.22)
-			_visual.size = Vector2(30, 24)  # chunkier base (will be further scaled by size_category)
-		GameEnums.OrganType.STARTER_VOID:
-			# Unique "incubation packet" - eerie purple void kelp / broth (also medium for gold starter preview).
-			_visual.color = Color(0.48, 0.22, 0.65)
-			_visual.size = Vector2(28, 26)
-			# Slight transparency for "ethereal" packet feel
-			_visual.modulate.a = 0.85
+	# Color is driven by rarity so that rarity is visually recognizable and consistent.
+	var col: Color
+	match rarity:
+		GameEnums.OrganRarity.COMMON:
+			col = Color(0.55, 0.52, 0.47)      # muted, earthy
+		GameEnums.OrganRarity.UNCOMMON:
+			col = Color(0.40, 0.62, 0.45)      # vibrant green
+		GameEnums.OrganRarity.RARE:
+			col = Color(0.30, 0.52, 0.78)      # clear blue
+		GameEnums.OrganRarity.MYTHIC:
+			col = Color(0.62, 0.35, 0.72)      # mystical purple
+		GameEnums.OrganRarity.ELDRITCH:
+			col = Color(0.82, 0.28, 0.35)      # wrong/red
 		_:
-			_visual.color = Color(0.7, 0.5, 0.6)
-			_visual.size = Vector2(22, 18)
+			col = Color(0.55, 0.52, 0.47)
 
-	_apply_size_visual()  # ensure size_category affects final rect size for medium preference preview
+	_visual.color = col
 
-# Apply minimal size visual scaling. Starter packets for the gold playloop are "medium" (larger, distinct).
-# This gives immediate visual distinction without a full OrganSize enum yet.
-func _apply_size_visual() -> void:
-	if _visual == null:
-		return
-	var factor := 1.0
+	# Base dimensions driven by size_category (rarity may get slight future embellishments).
+	var sz := Vector2(22, 18)
 	match size_category:
 		"small":
-			factor = 0.7
+			sz = Vector2(15, 12)
 		"large":
-			factor = 1.45
+			sz = Vector2(30, 24)
 		"medium", _:
-			factor = 1.15  # slightly larger than generic for the gold starter's matched food
-	_visual.size *= factor
-	# Also bump the collision shape slightly for larger targets (helps distinct "feel" when seeking).
-	var col := get_node_or_null("CollisionShape2D")
-	if col and col.shape is CircleShape2D:
-		(col.shape as CircleShape2D).radius *= factor
+			sz = Vector2(23, 19)
+
+	_visual.size = sz
+
+	# Update collision radius to match the new visual size for consistent targeting/feel.
+	var col_node := get_node_or_null("CollisionShape2D")
+	if col_node and col_node.shape is CircleShape2D:
+		(col_node.shape as CircleShape2D).radius = max(sz.x, sz.y) * 0.52
+
+# Legacy name kept for any external callers; now forwards to the size+rarity visual.
+func _update_visual_for_type() -> void:
+	_update_visual_for_rarity_and_size()
+
+# Legacy size scaling helper kept for compatibility. The primary sizing now lives in
+# _update_visual_for_rarity_and_size so that size+rarity organs are identical.
+func _apply_size_visual() -> void:
+	_update_visual_for_rarity_and_size()
 
 ## Force a specific type (used for unique starter packets from complimentary shipment).
-## Prevents the randomizer and forces visual refresh.
-## Also reapplies size_category (callers set size_category before or after this for the gold starter medium packets).
+## Prevents the randomizer. Visuals are now driven by rarity + size (see _update_visual_for_rarity_and_size),
+## so organs with matching size/rarity will have identical appearance regardless of type.
 func set_organ_type(new_type: GameEnums.OrganType) -> void:
 	type = new_type
-	_update_visual_for_type()  # Tentacle default
+	_update_visual_for_type()  # forwards to rarity+size visual for consistency
 
 ## Set size category explicitly (used by AquariumController when spawning the gold starter's medium packets).
 func set_size_category(new_size: String) -> void:
 	size_category = new_size
-	_apply_size_visual()
+	_update_visual_for_rarity_and_size()
+
+## Set rarity explicitly (used for starter shipments linked to pet type, future shop generation, yields).
+func set_rarity(new_rarity: GameEnums.OrganRarity) -> void:
+	rarity = new_rarity
+	_update_visual_for_rarity_and_size()
 
 ## Called by pet on each discrete collision/bump. Shrinks the organ gradually and emits small resource.
 func on_pet_bump(pet: Node = null) -> void:
@@ -181,6 +196,52 @@ func get_remaining_bites() -> int:
 
 func is_fully_consumed() -> bool:
 	return remaining_bites <= 0
+
+func _decay_and_rot() -> void:
+	"""Uneaten organ rots after DECAY_TIME.
+	Adds Pollution (size-scaled spike) and releases the organ's remaining resources
+	as collectible globs so the player can still recover Insight and Biomatter from rot.
+	"""
+	if _collected:
+		return
+	_collected = true
+
+	# Pollution cost of letting it rot
+	var poll_amt := 10
+	match size_category:
+		"small":
+			poll_amt = 5
+		"large":
+			poll_amt = 15
+		"medium", _:
+			poll_amt = 10
+
+	if _game_manager and _game_manager.has_method("add_resource"):
+		_game_manager.add_resource(GameEnums.ResourceType.POLLUTION, poll_amt)
+
+	# Release remaining resources (pro-rated by how many bites were left).
+	# This lets decayed organs "still release their resources" as clickable globs.
+	var remaining_fraction := 1.0
+	if bites_to_consume > 0:
+		remaining_fraction = float(remaining_bites) / float(bites_to_consume)
+
+	var rot_insight := int(insight_value * remaining_fraction)
+	var rot_biomass := int(biomass_value * remaining_fraction)
+
+	if _controller and _controller.has_method("spawn_resource_glob"):
+		if rot_insight > 0:
+			_controller.spawn_resource_glob(global_position, rot_insight, GameEnums.ResourceType.ELDRITCH_INSIGHT)
+		if rot_biomass > 0:
+			_controller.spawn_resource_glob(global_position + Vector2(randf_range(-4, 4), randf_range(-4, 4)), rot_biomass, GameEnums.ResourceType.ABYSSAL_BIOMATTER)
+
+	# Visual rot + cleanup
+	if _visual:
+		var t := create_tween()
+		t.tween_property(_visual, "modulate:a", 0.0, 0.25)
+		t.parallel().tween_property(self, "scale", Vector2(0.6, 0.6), 0.2)
+		t.tween_callback(queue_free)
+	else:
+		queue_free()
 
 func _on_input_event(_viewport: Node, event: InputEvent, _shape_idx: int) -> void:
 	if _collected:

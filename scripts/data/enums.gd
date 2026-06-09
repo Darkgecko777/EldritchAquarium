@@ -27,3 +27,11 @@ enum OrganType {
 	STARTER_PRIMAL,
 	STARTER_VOID
 }
+
+enum OrganRarity {
+	COMMON,     # lowest rarity (used for goldfish starter shipment etc.)
+	UNCOMMON,
+	RARE,
+	MYTHIC,
+	ELDRITCH
+}

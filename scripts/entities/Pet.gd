@@ -500,3 +500,16 @@ func _evolve() -> void:
 # - Different species with unique feeding preferences and abilities
 # - Synergies when multiple pets are near each other
 # - Personality quirks (some hate pollution, some love it)
+
+## Called when this pet dies due to pollution threshold (goldfish at 75%, etc.).
+## Plays a death visual before removal. The caller (usually AquariumController pollution reaction) is responsible
+## for granting the mnemonic fragment so the "why" (pollution threshold) is in one place.
+func die_from_pollution() -> void:
+	# Death visual + cleanup (keeps it lightweight; controller spawns floating text + grants shard).
+	if _body:
+		var t := create_tween()
+		t.tween_property(_body, "scale", _body.scale * Vector2(0.4, 0.3), 0.15)
+		t.parallel().tween_property(_body, "modulate:a", 0.0, 0.25)
+		t.tween_callback(queue_free)
+	else:
+		queue_free()
