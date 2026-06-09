@@ -42,10 +42,12 @@ var _in_opening: bool = false
 var _egg_node: Node = null
 var _incubating_label: Label = null
 var _incubating_bar: ProgressBar = null  # simple visual timer
-var _complimentary_claimed: bool = false
 var _force_starter_next_drop: bool = false
-var _opening_order_button_original_text: String = ""
 var _comic_panel: Control = null  # Reusable placeholder comic panel for tutorial phases (65% screen, 4-panel layout)
+
+# Bottom shipment catalog (6 squares for available shipments as game progresses)
+var _shipment_catalog: Control = null
+var _shipment_slots: Array = []
 
 # Pause state
 var _is_paused: bool = false
@@ -101,12 +103,6 @@ func _ready() -> void:
 		if _game_manager.has_signal("pollution_changed"):
 			_game_manager.pollution_changed.connect(_on_pollution_changed)
 
-	# Wire the Order button from the scene (if present)
-	var order_btn: Button = get_node_or_null("UI/OrderButton")
-	if order_btn:
-		_style_order_button(order_btn)
-		order_btn.pressed.connect(_on_order_button_pressed)
-
 	# Wire the primitive MENU button (top right)
 	var menu_btn: Button = get_node_or_null("UI/MenuButton")
 	if menu_btn:
@@ -131,7 +127,10 @@ func _ready() -> void:
 		# Normal / continuing run - spawn a gold starter larval pet (Freaky Goldfish primitive)
 		_spawn_starter_pet()
 
-	# print("[AquariumController] Ready. Press SPACE (if enabled) or use the Order button to drop containers.")  # cleared for resource debug focus
+	# Create the bottom shipment catalog panel (6 squares). First slot = basic shipment @ 4 Insight.
+	_create_shipment_catalog()
+
+	# print("[AquariumController] Ready. SPACE or bottom Shipment Panel slots to drop containers.")  # cleared for resource debug focus
 
 func _process(_delta: float) -> void:
 	if held_organ_type != -1 and held_indicator and is_instance_valid(held_indicator):
@@ -146,10 +145,9 @@ func _unhandled_input(event: InputEvent) -> void:
 		return
 
 	if event.is_action_pressed("ui_accept") or (event is InputEventKey and event.keycode == KEY_SPACE and event.pressed and not event.echo):
-		if _in_opening and not _complimentary_claimed:
-			_claim_complimentary_shipment()
-		elif _game_manager and _game_manager.has_method("order_shipment"):
-			_game_manager.order_shipment()
+		# SPACE orders a basic shipment (4 Insight cost, matching the first catalog slot).
+		if _game_manager and _game_manager.has_method("order_shipment"):
+			_game_manager.order_shipment(4)
 		get_viewport().set_input_as_handled()
 
 	# Debug: press T to return to TitleScreen (useful to demo the dynamic comic ad/catalog content after first pet eat).
@@ -169,14 +167,6 @@ func _unhandled_input(event: InputEvent) -> void:
 		elif _game_manager and _game_manager.has_method("add_resource"):
 			_game_manager.add_resource(GameEnums.ResourceType.ABYSSAL_BIOMATTER, 25)
 			# print("[Debug] Right-click added legacy Biomass. Remember: real Insight only comes from pet eating.")  # cleared for resource debug focus
-
-func _on_order_button_pressed() -> void:
-	if _in_opening and not _complimentary_claimed:
-		_claim_complimentary_shipment()
-		return
-
-	if _game_manager and _game_manager.has_method("order_shipment"):
-		_game_manager.order_shipment()
 
 func _on_shipment_ordered() -> void:
 	if shipping_container_scene == null:
@@ -212,7 +202,7 @@ func spawn_organs_from_container(position: Vector2, count: int = 3) -> void:
 		printerr("OrganScene not assigned!")
 		return
 
-	var is_starter_drop := _in_opening and (_force_starter_next_drop or not _complimentary_claimed)
+	var is_starter_drop := _in_opening and _force_starter_next_drop
 
 	if is_starter_drop:
 		_force_starter_next_drop = false
@@ -331,30 +321,17 @@ func _spawn_starter_pet() -> void:
 
 func start_opening_sequence() -> void:
 	_in_opening = true
-	_complimentary_claimed = false
 
-	# print("[AquariumController] Starting comic ad opening sequence (egg + complimentary).")  # cleared for resource debug focus
-
-	# Update instructions to comic ad flavor (exotic creatures pitch for the gold starter, Sea Monkeys aesthetic preserved)
-	var instr: Label = get_node_or_null("UI/Instructions")
-	if instr:
-		instr.text = "Your exotic specimen kit has arrived in the tank...\nWatch the egg incubate.\nCLAIM the complimentary shipment to get food in the water!"
-
-	# Repurpose Order button for the free claim during opening
-	var order_btn: Button = get_node_or_null("UI/OrderButton")
-	if order_btn:
-		_opening_order_button_original_text = order_btn.text
-		order_btn.text = "CLAIM COMPLIMENTARY SHIPMENT (FREE!)"
-		# style it more "ad like" temporarily if wanted
+	# print("[AquariumController] Starting comic ad opening sequence (egg + first shipment auto-drops).")  # cleared for resource debug focus
 
 	# Introduce reusable comic panel placeholder for the current phase (65% screen, 4-panel layout).
-	# This will be reused for future tutorial / phase descriptions.
-	# Each panel now includes clear "how to play" instructions.
+	# All key on-screen text/instructions have been moved into the comic panels.
+	# The first basic shipment now automatically drops in together with the egg (no separate button).
 	var phase1_texts: Array[String] = [
-		"1. THE AD IS YOUR SHOP\nThe comic catalog calls from the void. Click the ORDER button (or ad area) to begin your run and receive the exotic egg kit.",
-		"2. INCUBATE & CLAIM\nAn egg drops into the tank. Watch it pulse and incubate. Click CLAIM COMPLIMENTARY SHIPMENT to drop food – this reduces the hatch timer!",
-		"3. THE LARVA HATCHES\nYour Freaky Goldfish emerges. It is aggressive and prefers medium packets. It will swim and bump food on its own to eat (no clicking needed to feed).",
-		"4. CLICK THE GLOBS\nEach bite releases floating globs. Click them in the tank to collect Insight, Biomatter and Shards. This is active tending!"
+		"1. THE AD IS YOUR CATALOG\nThe comic catalog calls from the void. Your exotic starter kit arrives: the egg drops with its first shipment automatically.",
+		"2. INCUBATE\nWatch the egg pulse and incubate in the tank. The first shipment's food arrives with it and reduces the hatch timer as it is released!",
+		"3. THE LARVA HATCHES\nYour Freaky Goldfish emerges. It is aggressive and prefers medium packets. It swims and collides with food on its own to eat (no clicking needed to feed).",
+		"4. CLICK THE GLOBS\nEach bite releases floating globs. Click them in the tank to collect Insight, Biomatter and Shards (they fly to the HUD). Use the bottom Shipment Panel (6 slots) to order more food using Insight."
 	]
 	_comic_panel = _create_comic_panel("PHASE 1: THE EXOTIC ARRIVAL", phase1_texts)
 
@@ -371,32 +348,32 @@ func start_opening_sequence() -> void:
 		# Fallback: build a primitive egg inline (rare)
 		_create_fallback_egg()
 
-	# Create simple incubation UI (comic label + progress)
+	# Create simple incubation UI (comic label + progress) — egg also carries its own world labels
 	_create_incubation_ui()
 
-	# Optional: auto-hint or just let player click the (now free) button
-	# In a fuller version we could auto-drop the complimentary after a few seconds.
+	# The first shipment automatically drops in with the egg (no button or manual claim required)
+	_spawn_initial_shipment_with_egg()
 
 func _create_incubation_ui() -> void:
 	var ui_layer := get_node_or_null("UI")
 	if ui_layer == null:
 		return
 
-	# Big readable "INCUBATING" label (comic style)
+	# Small "INCUBATING" progress (top-left, above comic edges; egg also shows its own world-space timer/status)
 	_incubating_label = Label.new()
 	_incubating_label.name = "IncubatingLabel"
 	_incubating_label.text = "INCUBATING..."
-	_incubating_label.position = Vector2(20, 210)
-	_incubating_label.add_theme_font_size_override("font_size", 22)
-	_incubating_label.modulate = Color(0.95, 0.9, 0.7)
+	_incubating_label.position = Vector2(18, 92)
+	_incubating_label.add_theme_font_size_override("font_size", 14)
+	_incubating_label.modulate = Color(0.9, 0.88, 0.7)
 	_incubating_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	ui_layer.add_child(_incubating_label)
 
-	# Simple bar to show progress (0 = just started, full = about to hatch)
+	# Compact bar
 	_incubating_bar = ProgressBar.new()
 	_incubating_bar.name = "IncubatingBar"
-	_incubating_bar.position = Vector2(20, 238)
-	_incubating_bar.size = Vector2(220, 18)
+	_incubating_bar.position = Vector2(18, 110)
+	_incubating_bar.size = Vector2(160, 12)
 	_incubating_bar.max_value = 100.0
 	_incubating_bar.value = 0.0
 	_incubating_bar.show_percentage = false
@@ -556,41 +533,6 @@ func _update_incubation_ui() -> void:
 			else:
 				_incubating_label.text = "INCUBATING..."
 
-func _claim_complimentary_shipment() -> void:
-	if _complimentary_claimed or not _in_opening:
-		return
-
-	# print("[AquariumController] Claiming complimentary shipment for the opening (unique starter packets).")  # cleared for resource debug focus
-
-	# Force the next drop (the one we just spawned or direct) to use starters.
-	_force_starter_next_drop = true
-
-	# Spawn a "free" container visually for the satisfying drop.
-	var container: Node = null
-	if shipping_container_scene:
-		container = shipping_container_scene.instantiate()
-		_entities_layer.add_child(container)
-		var x: float = randf_range(-150, 150)
-		container.global_position = Vector2(x, tank_top_y - 80)
-		if container.has_method("initialize"):
-			container.initialize(self, organ_scene)
-		# spawn_organs will see the force flag and do the two unique packets + reduce timer.
-	else:
-		_spawn_starter_packets(Vector2(0, 80))
-
-	_complimentary_claimed = true
-
-	# Change button back toward normal (player can still order paid after)
-	var order_btn: Button = get_node_or_null("UI/OrderButton")
-	if order_btn and _opening_order_button_original_text != "":
-		order_btn.text = "Order more food (costs Insight)"
-	else:
-		order_btn.text = "Order Shipment"
-
-	# Immediately help the egg a little (food is "arriving")
-	if _egg_node and _egg_node.has_method("reduce_timer"):
-		_egg_node.reduce_timer(6.0)
-
 func _spawn_starter_packets(at_position: Vector2) -> void:
 	"""Spawns exactly the two unique starter incubation packets for the first egg/larva."""
 	if organ_scene == null:
@@ -644,6 +586,197 @@ func _spawn_starter_packets(at_position: Vector2) -> void:
 
 	# print("[AquariumController] Spawned 2 unique starter (medium) packets at ", at_position)  # cleared for resource debug focus
 
+# Auto-drop the first (complimentary) shipment together with the opening egg.
+# Spawns the visual ShippingContainer (it performs its drop tween), forces starter packets,
+# and auto-opens the container shortly after landing so food releases without any button press.
+func _spawn_initial_shipment_with_egg() -> void:
+	_force_starter_next_drop = true
+
+	if shipping_container_scene == null:
+		# Fallback: direct starter packets (no visual container)
+		_spawn_starter_packets(Vector2(20, 40))
+		return
+
+	var container: Node = shipping_container_scene.instantiate()
+	_entities_layer.add_child(container)
+
+	# Drop near the egg's x for nice "arrives together" visual
+	var x: float = randf_range(-90, 90)
+	container.global_position = Vector2(x, tank_top_y - 75)
+	if container.has_method("initialize"):
+		container.initialize(self, organ_scene)
+
+	# Auto-open after the container has had time to drop and settle (drop_duration ~1.2s + buffer).
+	# This releases the starter packets via the normal open() -> spawn_organs_from_container path.
+	var auto_delay: float = 1.65
+	get_tree().create_timer(auto_delay).timeout.connect(func() -> void:
+		if is_instance_valid(container) and container.has_method("open"):
+			container.open()
+	)
+
+# Create a persistent bottom panel holding 6 squares/slots for available shipments.
+# First slot is linked to the basic shipment (cost: 4 Insight). Clicking orders via GameManager.
+# Future slots can represent additional shipment types as they unlock/progress.
+func _create_shipment_catalog() -> void:
+	var ui_layer := get_node_or_null("UI")
+	if ui_layer == null:
+		return
+
+	_shipment_catalog = Panel.new()
+	_shipment_catalog.name = "ShipmentCatalog"
+	_shipment_catalog.custom_minimum_size = Vector2(0, 86)
+	# Anchor to bottom, centered-ish width with margins
+	_shipment_catalog.set_anchors_preset(Control.PRESET_BOTTOM_WIDE)
+	_shipment_catalog.offset_left = 40
+	_shipment_catalog.offset_right = -40
+	_shipment_catalog.offset_bottom = -12
+	_shipment_catalog.offset_top = -98
+
+	# Dark panel background with subtle border to fit the tank theme
+	var cat_style := StyleBoxFlat.new()
+	cat_style.bg_color = Color(0.06, 0.09, 0.12, 0.92)
+	cat_style.border_width_left = 2
+	cat_style.border_width_right = 2
+	cat_style.border_width_top = 2
+	cat_style.border_width_bottom = 2
+	cat_style.border_color = Color(0.25, 0.28, 0.32, 0.9)
+	_shipment_catalog.add_theme_stylebox_override("panel", cat_style)
+	_shipment_catalog.z_index = 10  # keep the bottom catalog above the center comic panel during opening
+
+	ui_layer.add_child(_shipment_catalog)
+
+	# Inner content
+	var margin := MarginContainer.new()
+	margin.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	margin.add_theme_constant_override("margin_left", 10)
+	margin.add_theme_constant_override("margin_top", 6)
+	margin.add_theme_constant_override("margin_right", 10)
+	margin.add_theme_constant_override("margin_bottom", 6)
+	_shipment_catalog.add_child(margin)
+
+	var vbox := VBoxContainer.new()
+	vbox.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	vbox.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	margin.add_child(vbox)
+
+	# Small header label for the panel
+	var header := Label.new()
+	header.text = "AVAILABLE SHIPMENTS"
+	header.add_theme_font_size_override("font_size", 11)
+	header.add_theme_color_override("font_color", Color(0.6, 0.65, 0.72))
+	header.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	vbox.add_child(header)
+
+	# Row of 6 squares
+	var hbox := HBoxContainer.new()
+	hbox.alignment = BoxContainer.ALIGNMENT_CENTER
+	hbox.add_theme_constant_override("separation", 10)
+	hbox.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	vbox.add_child(hbox)
+
+	_shipment_slots.clear()
+	for i in 6:
+		var slot := Panel.new()
+		slot.custom_minimum_size = Vector2(64, 52)
+		slot.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+		slot.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+
+		var slot_style := StyleBoxFlat.new()
+		if i == 0:
+			# First slot: the basic 4-insight shipment (linked and available)
+			slot_style.bg_color = Color(0.13, 0.18, 0.22)
+			slot_style.border_width_left = 3
+			slot_style.border_width_right = 3
+			slot_style.border_width_top = 3
+			slot_style.border_width_bottom = 3
+			slot_style.border_color = Color(0.45, 0.65, 0.75, 0.95)
+		else:
+			# Future/locked slots
+			slot_style.bg_color = Color(0.07, 0.09, 0.11)
+			slot_style.border_width_left = 2
+			slot_style.border_width_right = 2
+			slot_style.border_width_top = 2
+			slot_style.border_width_bottom = 2
+			slot_style.border_color = Color(0.22, 0.24, 0.27, 0.7)
+
+		slot.add_theme_stylebox_override("panel", slot_style)
+
+		# Content inside the square
+		var inner_margin := MarginContainer.new()
+		inner_margin.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+		inner_margin.add_theme_constant_override("margin_left", 4)
+		inner_margin.add_theme_constant_override("margin_top", 3)
+		inner_margin.add_theme_constant_override("margin_right", 4)
+		inner_margin.add_theme_constant_override("margin_bottom", 3)
+		slot.add_child(inner_margin)
+
+		var col := VBoxContainer.new()
+		col.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		col.size_flags_vertical = Control.SIZE_EXPAND_FILL
+		col.alignment = BoxContainer.ALIGNMENT_CENTER
+		inner_margin.add_child(col)
+
+		if i == 0:
+			# Basic shipment - cost 4 insight, clickable
+			var name_lbl := Label.new()
+			name_lbl.text = "BASIC"
+			name_lbl.add_theme_font_size_override("font_size", 10)
+			name_lbl.add_theme_color_override("font_color", Color(0.75, 0.85, 0.95))
+			name_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+			col.add_child(name_lbl)
+
+			var cost_row := HBoxContainer.new()
+			cost_row.alignment = BoxContainer.ALIGNMENT_CENTER
+			col.add_child(cost_row)
+
+			var cost_lbl := Label.new()
+			cost_lbl.text = "4"
+			cost_lbl.add_theme_font_size_override("font_size", 14)
+			cost_lbl.add_theme_color_override("font_color", Color(0.6, 0.85, 1.0))
+			cost_row.add_child(cost_lbl)
+
+			# Small insight icon if available
+			if insight_icon_texture != null:
+				var ic := TextureRect.new()
+				ic.texture = insight_icon_texture
+				ic.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+				ic.custom_minimum_size = Vector2(14, 14)
+				ic.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+				cost_row.add_child(ic)
+
+			# Click area: overlay button (invisible chrome) for hit + signal
+			var clicker := Button.new()
+			clicker.text = ""
+			clicker.flat = true
+			clicker.modulate = Color(1, 1, 1, 0)  # fully transparent; only for interaction
+			clicker.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+			clicker.pressed.connect(_on_shipment_slot_pressed.bind(0))
+			slot.add_child(clicker)
+		else:
+			# Placeholder for future shipments
+			var lock_lbl := Label.new()
+			lock_lbl.text = "?"
+			lock_lbl.add_theme_font_size_override("font_size", 16)
+			lock_lbl.add_theme_color_override("font_color", Color(0.35, 0.38, 0.42))
+			lock_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+			col.add_child(lock_lbl)
+
+		hbox.add_child(slot)
+		_shipment_slots.append(slot)
+
+# Handler for clicking a shipment slot in the bottom catalog.
+# Currently only slot 0 (basic, 4 insight) is wired.
+func _on_shipment_slot_pressed(slot_index: int) -> void:
+	if slot_index != 0:
+		return  # others locked / not implemented yet
+
+	if _game_manager and _game_manager.has_method("order_shipment"):
+		# Link the first space to the basic shipment at cost of 4 insight
+		var ok: bool = _game_manager.order_shipment(4)
+		if not ok:
+			# Could add a brief "not enough insight" floating note, but keep minimal for now
+			pass
+
 # Called from Egg when its timer hits zero (or was reduced to zero).
 func hatch_egg_at(pos: Vector2) -> void:
 	if not _in_opening or _egg_node == null:
@@ -690,14 +823,7 @@ func hatch_egg_at(pos: Vector2) -> void:
 	_egg_node = null
 
 func _restore_normal_ui_after_hatch() -> void:
-	var instr: Label = get_node_or_null("UI/Instructions")
-	if instr:
-		instr.text = "SPACE or Order button: drop container\nWatch your Freaky Goldfish seek & eat the medium packets (collisions!)\nClick the released globs to collect Insight, Biomatter and Shards (they fly to the HUD)."
-
-	var order_btn: Button = get_node_or_null("UI/OrderButton")
-	if order_btn:
-		order_btn.text = "Order Shipment (Insight)"
-
+	# Instructions text lives in the opening comic panel (removed here). Post-hatch, use SPACE or the bottom Shipment Panel (6 slots) to order shipments.
 	# Optional: small comic popup for the gold starter hatch
 	_spawn_floating_text("THE GOLDFISH LIVES!", Vector2(0, 60), Color(0.95, 0.82, 0.4), 2.2)
 
@@ -1048,27 +1174,3 @@ func _style_menu_button(button: Button) -> void:
 	button.add_theme_stylebox_override("hover", style)
 	button.add_theme_color_override("font_color", Color(0.85, 0.8, 0.75))
 	button.add_theme_color_override("font_hover_color", Color.WHITE)
-
-func _style_order_button(button: Button) -> void:
-	var normal := StyleBoxFlat.new()
-	normal.bg_color = Color(0.1, 0.22, 0.28, 0.95)
-	normal.corner_radius_top_left = 6
-	normal.corner_radius_top_right = 6
-	normal.corner_radius_bottom_left = 6
-	normal.corner_radius_bottom_right = 6
-	normal.border_width_left = 2
-	normal.border_width_right = 2
-	normal.border_width_top = 2
-	normal.border_width_bottom = 2
-	normal.border_color = Color(0.4, 0.65, 0.75, 0.6)
-
-	var hover := normal.duplicate() as StyleBoxFlat
-	hover.bg_color = Color(0.15, 0.32, 0.38, 0.98)
-	hover.border_color = Color(0.55, 0.8, 0.9, 0.85)
-
-	button.add_theme_stylebox_override("normal", normal)
-	button.add_theme_stylebox_override("hover", hover)
-	button.add_theme_stylebox_override("pressed", normal)
-	button.add_theme_color_override("font_color", Color(0.85, 0.95, 1.0))
-	button.add_theme_color_override("font_hover_color", Color.WHITE)
-	button.add_theme_font_size_override("font_size", 14)

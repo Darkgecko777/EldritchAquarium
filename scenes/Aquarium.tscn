@@ -128,26 +128,6 @@ max_value = 100.0
 value = 0.0
 show_percentage = false
 
-[node name="Instructions" type="Label" parent="UI"]
-offset_left = 20.0
-offset_top = 80.0
-offset_right = 520.0
-offset_bottom = 140.0
-text = "SPACE or Order button to drop containers
-Watch your Freaky Goldfish seek & eat the medium packets (collisions!)
-Click the released globs to collect Insight, Biomatter and Shards (they fly to the HUD)."
-theme_override_font_sizes/font_size = 16
-modulate = Color(0.8, 0.9, 1, 0.85)
-
-[node name="OrderButton" type="Button" parent="UI"]
-offset_left = 20.0
-offset_top = 160.0
-offset_right = 160.0
-offset_bottom = 200.0
-text = "Order Shipment (Insight)"
-theme_override_font_sizes/font_size = 14
-
-[node name="MenuButton" type="Button" parent="UI"]
 [node name="MenuButton" type="Button" parent="UI"]
 layout_mode = 1
 anchors_preset = 1
