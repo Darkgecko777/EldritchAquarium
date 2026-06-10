@@ -50,19 +50,25 @@ var hunger_rate_multiplier: float = 1.0
 var _original_body_color: Color = Color(1.0, 0.65, 0.2)
 
 func _ready() -> void:
+	# Editor-first: The "Sprite" AnimatedSprite2D is placed in Pet.tscn.
+	# Script configures frames/offset/scale/play instead of creating the node.
 	_body = get_node_or_null("Sprite") as CanvasItem
 	if _body == null:
-		# Use the newly added Goldfish_Stage_One_Idle sprite sequence (53 frames) for the base normal goldfish animation.
-		# This replaces the previous primitive ColorRect visuals. The animation provides the swimming/idle motion.
-		# Later evolution stages can swap to different sprite sets or add effects on top.
+		# Defensive fallback (should not happen if scene is authored correctly).
+		# Prefer keeping the node in the .tscn.
 		var sprite := AnimatedSprite2D.new()
 		sprite.name = "Sprite"
 		add_child(sprite)
+		_body = sprite
 
+	# Populate/configure animation on the (editor-placed or fallback) sprite.
+	# Using the Goldfish_Stage_One_Idle sequence (53 frames) for the normal goldfish starter.
+	if _body is AnimatedSprite2D:
+		var sprite := _body as AnimatedSprite2D
 		var sprite_frames := SpriteFrames.new()
 		sprite_frames.add_animation("idle")
 		sprite_frames.set_animation_loop("idle", true)
-		sprite_frames.set_animation_speed("idle", 12.0)  # ~4.4s loop for 53 frames; smooth idle swim
+		sprite_frames.set_animation_speed("idle", 12.0)
 
 		for i in range(1, 54):
 			var path := "res://assets/sprites/pets/starter/Goldfish_Stage_One_Idle/%04d.png" % i
@@ -73,55 +79,33 @@ func _ready() -> void:
 		sprite.sprite_frames = sprite_frames
 		sprite.play("idle")
 
-		# Center the sprite on the pet origin using offset (frames are drawn from top-left by default)
+		# Center + scale the visual (same math as before; configuration, not creation).
 		if sprite.sprite_frames and sprite.sprite_frames.has_animation("idle"):
 			var frame_count: int = sprite.sprite_frames.get_frame_count("idle")
 			if frame_count > 0:
 				var first_tex: Texture2D = sprite.sprite_frames.get_frame_texture("idle", 0)
 				if first_tex:
 					var native_size = first_tex.get_size()
-					# Base centering for the frame (top-left origin)
 					sprite.offset = -native_size / 2.0
-
-					# Scale the goldfish to roughly 100x100 pixels (maintain aspect)
 					var target_size = 100.0
 					var sf = target_size / max(native_size.x, native_size.y)
 					sprite.scale = Vector2(sf, sf)
 
-					# Additional alignment in final pixels to center the fish art (not the whole frame) on the pet origin (0,0).
-					# This aligns the visual goldfish with the collision shape (InteractArea circle at (0,0)) and the hunger bar.
-					# The shift (120, -120) is based on the screenshot with collision debug: move sprite visual +120 X, -120 Y.
-					var alignment_final = Vector2(120, -120)
-					var alignment_in_texture = alignment_final / sf
-					sprite.offset += alignment_in_texture
-
-		_body = sprite
 		_original_body_color = Color(1, 1, 1)
 
 	_ensure_hunger_bar()
 
-	# Make the pet clickable for future "inspect" or direct feed UI
-	# Reuse existing InteractArea from scene if present (to avoid duplicates), otherwise create.
+	# Editor-first: InteractArea + CollisionShape2D are placed in Pet.tscn.
+	# Script only wires signals and ensures radius (can also be set in the scene).
 	var area: Area2D = get_node_or_null("InteractArea")
-	if area == null:
-		area = Area2D.new()
-		area.name = "InteractArea"
-		add_child(area)
+	if area != null:
+		area.input_event.connect(_on_interact_area_input)
+		area.input_pickable = true
+		var shape: CollisionShape2D = area.get_node_or_null("CollisionShape2D")
+		if shape != null and shape.shape is CircleShape2D:
+			(shape.shape as CircleShape2D).radius = 60.0
 
-	# Ensure a collision shape with appropriate radius for the ~100px fish.
-	var shape: CollisionShape2D = area.get_node_or_null("CollisionShape2D")
-	if shape == null:
-		shape = CollisionShape2D.new()
-		shape.name = "CollisionShape2D"
-		area.add_child(shape)
-	var circ := CircleShape2D.new()
-	circ.radius = 60  # sized for ~100px goldfish visual (covers the sprite + some margin for interaction)
-	shape.shape = circ
-
-	area.input_event.connect(_on_interact_area_input)
-	area.input_pickable = true
-
-	# Ensure hunger bar is positioned under the newly scaled sprite immediately
+	# Ensure hunger bar is positioned under the scaled sprite immediately
 	_update_hunger_bar()
 
 	_pick_new_wander_target()
@@ -235,25 +219,32 @@ func _pick_new_wander_target() -> void:
 	_wander_timer = randf_range(2.5, 5.5)
 
 func _ensure_hunger_bar() -> void:
-	if get_node_or_null("HungerBarBG") != null:
-		return
-	var bg := ColorRect.new()
-	bg.name = "HungerBarBG"
-	bg.size = Vector2(70, 6)  # wider for ~100px goldfish
-	bg.position = Vector2(-34, 30)  # initial for ~100px fish centered at (0,0); will be adjusted in _update_hunger_bar based on bob + scale
-	bg.color = Color(0.10, 0.07, 0.05, 0.95)
-	bg.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	add_child(bg)
-	_hunger_bar_bg = bg
+	# Editor-first: HungerBarBG / HungerBarFill are placed in Pet.tscn.
+	# Script retrieves and stores references; creation path is defensive only.
+	_hunger_bar_bg = get_node_or_null("HungerBarBG") as ColorRect
+	if _hunger_bar_bg == null:
+		# Defensive runtime creation (avoid in normal flow; keep scene nodes authoritative).
+		var bg := ColorRect.new()
+		bg.name = "HungerBarBG"
+		bg.size = Vector2(70, 6)
+		bg.position = Vector2(-34, 30)
+		bg.color = Color(0.10, 0.07, 0.05, 0.95)
+		bg.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		add_child(bg)
+		_hunger_bar_bg = bg
 
-	var fill := ColorRect.new()
-	fill.name = "HungerBarFill"
-	fill.size = Vector2(68, 4)
-	fill.position = Vector2(1, 1)
-	fill.color = Color(0.92, 0.62, 0.25)
-	fill.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	bg.add_child(fill)
-	_hunger_bar_fill = fill
+	_hunger_bar_fill = null
+	if _hunger_bar_bg:
+		_hunger_bar_fill = _hunger_bar_bg.get_node_or_null("HungerBarFill") as ColorRect
+	if _hunger_bar_fill == null and _hunger_bar_bg:
+		var fill := ColorRect.new()
+		fill.name = "HungerBarFill"
+		fill.size = Vector2(68, 4)
+		fill.position = Vector2(1, 1)
+		fill.color = Color(0.92, 0.62, 0.25)
+		fill.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		_hunger_bar_bg.add_child(fill)
+		_hunger_bar_fill = fill
 
 func _update_hunger_bar() -> void:
 	if _hunger_bar_fill == null or _hunger_bar_bg == null:

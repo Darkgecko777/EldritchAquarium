@@ -66,16 +66,20 @@ func _ready() -> void:
 	if _visual:
 		_visual.scale = Vector2(1, 1)
 
-	# Add a small decay timer bar above the food (visible progress toward rot/pollution).
-	# This makes the decay timer on food obvious to the player.
-	_decay_bar = ColorRect.new()
-	_decay_bar.name = "DecayBar"
-	_decay_bar.size = Vector2(18, 2)
-	_decay_bar.position = Vector2(-9, -20)  # positioned above the main visual
-	_decay_bar.color = Color(0.85, 0.25, 0.15, 0.85)  # rotting red-orange
-	_decay_bar.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	add_child(_decay_bar)
-	_decay_bar.visible = true  # will be driven by _process decay progress
+	# Editor-first: DecayBar and InputArea are placed in Organ.tscn.
+	# Script retrieves references instead of creating the nodes.
+	_decay_bar = get_node_or_null("DecayBar") as ColorRect
+	if _decay_bar == null:
+		# Defensive fallback only.
+		_decay_bar = ColorRect.new()
+		_decay_bar.name = "DecayBar"
+		_decay_bar.size = Vector2(18, 2)
+		_decay_bar.position = Vector2(-9, -20)
+		_decay_bar.color = Color(0.85, 0.25, 0.15, 0.85)
+		_decay_bar.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		add_child(_decay_bar)
+	if _decay_bar:
+		_decay_bar.visible = true
 
 	# Physics props (can override per instance in spawn)
 	# No gravity: organs are "weightless" in the tank and only move from explosion impulse,
@@ -90,8 +94,7 @@ func _ready() -> void:
 	mat.friction = 0.08
 	physics_material_override = mat
 
-	# Use a dedicated larger Area2D for mouse input (hold to decay, click to pickup).
-	# This makes "holding mouse on food" reliable even if the physics collision is small.
+	# Editor-first input area (larger hover/click target). Wire if present.
 	_setup_input_area()
 
 	add_to_group("organs")  # helps Pet find food targets for autonomous eating
@@ -246,21 +249,25 @@ func _update_hold_visual() -> void:
 		else:
 			_visual.color = _original_visual_color
 
-# Setup a dedicated Area2D (larger than the physics collision) for reliable mouse input.
+# Setup (or wire) a dedicated Area2D (larger than the physics collision) for reliable mouse input.
+# Editor-placed "InputArea" in Organ.tscn is preferred. Creation is defensive.
 # This allows the player to easily "hold the mouse on food" to accelerate decay (4x),
 # and click when ready for legacy pickup. The physics collision stays small for natural bouncing.
 func _setup_input_area() -> void:
-	var area := Area2D.new()
-	area.name = "InputArea"
-	area.input_pickable = true
-	var shape := CollisionShape2D.new()
-	var circ := CircleShape2D.new()
-	# Size the input area to comfortably cover the visual (larger than physics radius ~0.52)
-	var sz := _visual.size if _visual else Vector2(22, 18)
-	circ.radius = max(sz.x, sz.y) * 0.75 + 4
-	shape.shape = circ
-	area.add_child(shape)
-	add_child(area)
+	var area: Area2D = get_node_or_null("InputArea")
+	if area == null:
+		area = Area2D.new()
+		area.name = "InputArea"
+		area.input_pickable = true
+		var shape := CollisionShape2D.new()
+		var circ := CircleShape2D.new()
+		var sz := _visual.size if _visual else Vector2(22, 18)
+		circ.radius = max(sz.x, sz.y) * 0.75 + 4
+		shape.shape = circ
+		area.add_child(shape)
+		add_child(area)
+	else:
+		area.input_pickable = true
 	area.input_event.connect(_on_input_event)
 
 func _decay_and_rot() -> void:

@@ -1,4 +1,4 @@
-[gd_scene load_steps=5 format=3 uid="uid://aquarium_main"]
+[gd_scene load_steps=8 format=3 uid="uid://aquarium_main"]
 
 [ext_resource type="Script" path="res://scripts/AquariumController.gd" id="1_controller"]
 [ext_resource type="Script" path="res://scripts/ui/ResourceDisplay.gd" id="2_resourcedisplay"]
@@ -7,10 +7,12 @@
 [ext_resource type="PackedScene" path="res://scenes/entities/ResourceGlob.tscn" id="5_glob"]
 [ext_resource type="Texture2D" path="res://assets/sprites/icons/abyssal_biomass_icon.png" id="6_biomass_icon"]
 [ext_resource type="Texture2D" path="res://assets/sprites/icons/forgotten_mnemonics_icon.png" id="7_mnemonics_icon"]
+[ext_resource type="PackedScene" path="res://scenes/entities/Pet.tscn" id="8_pet"]
 
 [node name="Aquarium" type="Node2D"]
 script = ExtResource("1_controller")
 egg_scene = ExtResource("3_egg")
+pet_scene = ExtResource("8_pet")
 insight_icon_texture = ExtResource("4_insight_icon")
 resource_glob_scene = ExtResource("5_glob")
 biomatter_icon_texture = ExtResource("6_biomass_icon")
@@ -46,6 +48,15 @@ mouse_filter = 2
 [node name="Entities" type="Node" parent="."]
 
 [node name="Pets" type="Node" parent="."]
+
+; === STARTER PET (goldfish) placed in the editor per the project rule to prefer scene assignments over runtime spawn.
+; The controller will detect it and only initialize (instead of instantiating) for fresh runs.
+; Position, name, species, and starting stage are set here in the scene.
+[node name="Goldfish" type="CharacterBody2D" parent="Pets" instance=ExtResource("8_pet")]
+position = Vector2(0, 80)
+pet_name = "Normal Goldfish"
+species = 0
+current_stage = 0
 
 [node name="UI" type="CanvasLayer" parent="."]
 

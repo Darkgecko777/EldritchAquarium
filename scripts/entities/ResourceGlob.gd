@@ -12,7 +12,10 @@ var _drift: Vector2 = Vector2.ZERO
 var _collected: bool = false
 
 func _ready() -> void:
-	_build_visual()
+	# Editor-first: "Visual" host node + "HoverArea" are in ResourceGlob.tscn.
+	# _build_visual populates under the host when present (or replaces its children for icon vs primitive).
+	var host := get_node_or_null("Visual")
+	_build_visual(null, host if host else null)
 	_setup_hover_area()
 	_drift = Vector2(randf_range(-12, 12), randf_range(-8, 8)).normalized() * randf_range(4, 10)
 
@@ -21,15 +24,19 @@ func initialize(res_type: GameEnums.ResourceType, amt: int, icon_tex: Texture2D 
 	amount = max(1, amt)
 	_controller = controller
 
-	# Rebuild visual if icon provided after ready (or call again)
-	if _visual:
-		_visual.queue_free()
+	# Rebuild visual under the editor-placed "Visual" host.
+	# Clear prior children of the host (supports re-init with icon after spawn).
+	var host := get_node_or_null("Visual")
+	if host:
+		for c in host.get_children():
+			c.queue_free()
 		_visual = null
-	_build_visual(icon_tex)
+	_build_visual(icon_tex, host)
 
-func _build_visual(icon_tex: Texture2D = null) -> void:
+func _build_visual(icon_tex: Texture2D = null, host: Node = null) -> void:
 	var is_insight := resource_type == GameEnums.ResourceType.ELDRITCH_INSIGHT
 	var base_size := Vector2(52, 52)
+	var parent := host if host else self
 
 	if icon_tex != null:
 		var tr := TextureRect.new()
@@ -40,7 +47,7 @@ func _build_visual(icon_tex: Texture2D = null) -> void:
 		tr.modulate = Color(1, 1, 1, 0.95)
 		tr.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		tr.position = -base_size / 2
-		add_child(tr)
+		parent.add_child(tr)
 		_visual = tr
 	else:
 		var cr := ColorRect.new()
@@ -48,7 +55,7 @@ func _build_visual(icon_tex: Texture2D = null) -> void:
 		cr.position = -base_size / 2
 		cr.color = Color(0.35, 0.7, 0.95) if is_insight else Color(0.35, 0.75, 0.45)
 		cr.mouse_filter = Control.MOUSE_FILTER_IGNORE
-		add_child(cr)
+		parent.add_child(cr)
 		_visual = cr
 
 	if _visual:
@@ -57,15 +64,17 @@ func _build_visual(icon_tex: Texture2D = null) -> void:
 		pop.tween_property(_visual, "scale", Vector2(1.0, 1.0), 0.22)
 
 func _setup_hover_area() -> void:
-	# Hover area for collecting resources on mouse hover (instead of click).
-	# This makes collection more automatic and fluid while the player tends the tank.
-	_area = Area2D.new()
-	_area.name = "HoverArea"
-	var shape := CollisionShape2D.new()
-	shape.shape = CircleShape2D.new()
-	(shape.shape as CircleShape2D).radius = 48  # slightly larger for easier hover collection
-	_area.add_child(shape)
-	add_child(_area)
+	# Editor-first: HoverArea is placed in ResourceGlob.tscn.
+	# Script wires the signal; creation is defensive fallback.
+	_area = get_node_or_null("HoverArea") as Area2D
+	if _area == null:
+		_area = Area2D.new()
+		_area.name = "HoverArea"
+		var shape := CollisionShape2D.new()
+		shape.shape = CircleShape2D.new()
+		(shape.shape as CircleShape2D).radius = 48
+		_area.add_child(shape)
+		add_child(_area)
 	_area.input_pickable = true
 	_area.mouse_entered.connect(_on_mouse_entered)
 

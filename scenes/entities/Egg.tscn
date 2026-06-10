@@ -2,9 +2,37 @@
 
 [ext_resource type="Script" path="res://scripts/entities/Egg.gd" id="1_egg"]
 
+[sub_resource type="CircleShape2D" id="CircleShape2D_Egg"]
+radius = 32.0
+
 [node name="Egg" type="Node2D"]
 script = ExtResource("1_egg")
 base_hatch_time = 8.0
 
-; Visuals are 100% distinct primitives created in _build_primitives (golden/eldritch egg for the gold starter playloop).
-; No sprites used for this iteration (scrapped per plan; multi-rect shell + inner for shape/tint/pulse).
+; === EDITOR-PLACED VISUAL ===
+; Shell + Inner use the same serialization style as other manually-positioned ColorRects
+; in the project (offsets for top level under Node2D; layout_mode=0 + offsets for the
+; nested child ColorRect). This avoids parse errors when viewing the .tscn in the editor.
+[node name="Shell" type="ColorRect" parent="."]
+offset_left = -23.0
+offset_top = -18.0
+offset_right = 23.0
+offset_bottom = 18.0
+color = Color(0.92, 0.82, 0.55, 1)
+pivot_offset = Vector2(23, 18)
+mouse_filter = 2
+
+[node name="Inner" type="ColorRect" parent="Shell"]
+layout_mode = 0
+offset_left = -10.0
+offset_top = -8.0
+offset_right = 10.0
+offset_bottom = 8.0
+color = Color(0.55, 0.42, 0.22, 0.65)
+mouse_filter = 2
+
+; Clickable area for flavor (click reduces timer slightly). Editor-placed for consistency.
+[node name="InputArea" type="Area2D" parent="."]
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="InputArea"]
+shape = SubResource("CircleShape2D_Egg")

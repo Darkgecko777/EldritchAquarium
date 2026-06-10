@@ -17,18 +17,18 @@ var _visual: ColorRect
 var _pressed_on_me: bool = false
 
 func _ready() -> void:
-	# Create a simple visual if none exists
-	_visual = get_node_or_null("Visual")
+	# Editor-first: Visual and ClickArea are authored in ShippingContainer.tscn.
+	# Script retrieves them; creation is defensive fallback only.
+	_visual = get_node_or_null("Visual") as ColorRect
 	if _visual == null:
 		_visual = ColorRect.new()
 		_visual.name = "Visual"
 		_visual.size = Vector2(80, 60)
 		_visual.color = closed_color
-		_visual.position = Vector2(-40, -30)  # center it
+		_visual.position = Vector2(-40, -30)
 		_visual.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		add_child(_visual)
 
-	# Make clickable
 	var area: Area2D = get_node_or_null("ClickArea")
 	if area == null:
 		area = Area2D.new()

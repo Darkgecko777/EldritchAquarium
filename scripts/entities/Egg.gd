@@ -82,55 +82,64 @@ func _start_drop_tween() -> void:
 	# print("[Egg] Landed and incubating.")  # cleared for resource debug focus
 
 func _build_primitives() -> void:
-	_shell = get_node_or_null("Shell")
+	# Editor-first: Shell, Inner, StatusLabel, TimerLabel, and InputArea are placed in Egg.tscn.
+	# Script retrieves and applies initial configuration / wiring. Creation is defensive.
+	_shell = get_node_or_null("Shell") as CanvasItem
 	if _shell == null:
-		# Distinct golden/eldritch egg primitive for the gold starter (Freaky Goldfish) playloop.
-		# Multi-rect for shape + inner "horror" yolk. Gold tint + slight uncanny shift.
+		# Distinct golden/eldritch egg primitive (fallback only).
 		_shell = ColorRect.new()
 		_shell.name = "Shell"
-		_shell.size = Vector2(46, 36)  # slightly oval proportions
+		_shell.size = Vector2(46, 36)
 		_shell.position = Vector2(-23, -18)
-		_shell.color = Color(0.92, 0.82, 0.55)  # warm gold base
-		_shell.pivot_offset = _shell.size / 2
-		_shell.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		_shell.color = Color(0.92, 0.82, 0.55)
+		(_shell as ColorRect).pivot_offset = _shell.size / 2
+		(_shell as ColorRect).mouse_filter = Control.MOUSE_FILTER_IGNORE
 		add_child(_shell)
 	_original_scale = _shell.scale
 
-	# Inner "yolk" / developing goldfish horror hint (distinct from generic).
+	# Inner yolk (editor-placed child preferred)
 	if _shell is ColorRect:
-		_inner = ColorRect.new()
-		_inner.name = "Inner"
-		_inner.size = Vector2(20, 16)
-		_inner.position = Vector2(-10, -8)
-		_inner.color = Color(0.55, 0.42, 0.22, 0.65)  # deeper gold/ochre
-		_inner.mouse_filter = Control.MOUSE_FILTER_IGNORE
-		_shell.add_child(_inner)
+		_inner = _shell.get_node_or_null("Inner") as CanvasItem
+		if _inner == null:
+			_inner = ColorRect.new()
+			_inner.name = "Inner"
+			_inner.size = Vector2(20, 16)
+			_inner.position = Vector2(-10, -8)
+			(_inner as ColorRect).color = Color(0.55, 0.42, 0.22, 0.65)
+			(_inner as ColorRect).mouse_filter = Control.MOUSE_FILTER_IGNORE
+			_shell.add_child(_inner)
 
-	# Comic-style status label above
-	_status_label = Label.new()
-	_status_label.name = "StatusLabel"
-	_status_label.text = "INCUBATING..."
-	_status_label.position = Vector2(-25, -55)
-	_status_label.add_theme_font_size_override("font_size", 14)
-	_status_label.modulate = Color(0.9, 0.85, 0.7, 0.95)
-	add_child(_status_label)
+	# Labels (editor-placed)
+	_status_label = get_node_or_null("StatusLabel") as Label
+	if _status_label == null:
+		_status_label = Label.new()
+		_status_label.name = "StatusLabel"
+		_status_label.text = "INCUBATING..."
+		_status_label.position = Vector2(-25, -55)
+		_status_label.add_theme_font_size_override("font_size", 14)
+		_status_label.modulate = Color(0.9, 0.85, 0.7, 0.95)
+		add_child(_status_label)
 
-	# Timer readout (comic "ad" flavor)
-	_timer_label = Label.new()
-	_timer_label.name = "TimerLabel"
-	_timer_label.text = "30s"
-	_timer_label.position = Vector2(-18, -40)
-	_timer_label.add_theme_font_size_override("font_size", 18)
-	_timer_label.modulate = Color(1, 0.95, 0.8)
-	add_child(_timer_label)
+	_timer_label = get_node_or_null("TimerLabel") as Label
+	if _timer_label == null:
+		_timer_label = Label.new()
+		_timer_label.name = "TimerLabel"
+		_timer_label.text = "30s"
+		_timer_label.position = Vector2(-18, -40)
+		_timer_label.add_theme_font_size_override("font_size", 18)
+		_timer_label.modulate = Color(1, 0.95, 0.8)
+		add_child(_timer_label)
 
-	# Make the whole egg "clickable" for flavor (maybe speeds it a tiny bit or just feedback)
-	var area := Area2D.new()
-	var shape := CollisionShape2D.new()
-	shape.shape = CircleShape2D.new()
-	(shape.shape as CircleShape2D).radius = 32
-	area.add_child(shape)
-	add_child(area)
+	# Input area (editor-placed preferred)
+	var area: Area2D = get_node_or_null("InputArea")
+	if area == null:
+		area = Area2D.new()
+		area.name = "InputArea"
+		var shape := CollisionShape2D.new()
+		shape.shape = CircleShape2D.new()
+		(shape.shape as CircleShape2D).radius = 32
+		area.add_child(shape)
+		add_child(area)
 	area.input_pickable = true
 	area.input_event.connect(_on_egg_clicked)
 

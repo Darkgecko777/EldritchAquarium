@@ -100,7 +100,8 @@ func _ready() -> void:
 	else:
 		add_child(held_indicator)
 
-	# Create layers if they don't exist in the scene tree
+	# Layers are declared in Aquarium.tscn (Entities + Pets children of root).
+	# Defensive creation kept for robustness if scene is edited outside normal flow.
 	_entities_layer = get_node_or_null("Entities")
 	if _entities_layer == null:
 		_entities_layer = Node.new()
@@ -412,6 +413,17 @@ func _process_hold_state() -> void:
 
 func _spawn_starter_pet() -> void:
 	_goldfish_died_from_pollution = false
+
+	# Editor-first: If a Pet (goldfish) instance is already present as a child of the "Pets" node in the scene,
+	# respect the editor placement (position, pet_name, species, current_stage etc. set in .tscn).
+	# Only call initialize on the existing one(s). This is the preferred path.
+	if _pets_layer and _pets_layer.get_child_count() > 0:
+		for child in _pets_layer.get_children():
+			if child.has_method("initialize"):
+				child.initialize(_game_manager, self)
+		return
+
+	# Fallback: no editor-placed pet in the scene — spawn one (kept for robustness / other test setups).
 	if pet_scene == null:
 		# print("[AquariumController] No PetScene assigned — skipping starter pet (add one in inspector later).")  # cleared for resource debug focus
 		return
@@ -419,15 +431,14 @@ func _spawn_starter_pet() -> void:
 	var pet: Node = pet_scene.instantiate()
 	_pets_layer.add_child(pet)
 
-	# v1.6: Fully formed normal goldfish at the start of the run. Not a larva, not from an egg.
-	# It looks like a classic aquarium goldfish initially; evolutions will mutate it.
+	# v1.6: Fully formed normal goldfish at the start of the run.
 	pet.global_position = Vector2(0, 80)
 	if "species" in pet:
 		pet.species = GameEnums.PetSpecies.FREAKY_GOLDFISH
 	if "pet_name" in pet:
 		pet.pet_name = "Normal Goldfish"
 	if "current_stage" in pet:
-		pet.current_stage = GameEnums.EvolutionStage.LARVAL  # starting point for mutation progression; visual will be made "normal" in Pet.gd
+		pet.current_stage = GameEnums.EvolutionStage.LARVAL
 	if pet.has_method("initialize"):
 		pet.initialize(_game_manager, self)
 
