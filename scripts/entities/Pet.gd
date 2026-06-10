@@ -23,7 +23,7 @@ var _body: CanvasItem
 
 # Smoother pathing state (reduces jitter when idling or switching targets)
 var _smoothed_velocity: Vector2 = Vector2.ZERO
-var _arrival_radius: float = 28.0
+var _arrival_radius: float = 50.0  # larger for ~100px sprite fish
 var _idle_damping: float = 6.0
 var _steering_accel: float = 11.0  # higher = snappier, lower = floatier/smoother
 var _bump_kick: Vector2 = Vector2.ZERO  # decayed external impulse from collisions
@@ -32,66 +32,97 @@ var _bump_kick: Vector2 = Vector2.ZERO  # decayed external impulse from collisio
 var _current_food_target: Node = null
 var _hits_on_current_food: int = 0
 var _eats_required_for_larva: int = 1  # one bite per homing session; organ controls how many bites it takes
-var _eat_radius: float = 22.0  # distance at which a "collision"/bump is counted
+var _eat_radius: float = 50.0  # distance at which a "collision"/bump is counted (larger for ~100px sprite fish)
 var _seek_speed_multiplier: float = 1.0  # larva is eager
 
 # Hunger timer (individual per pet). When >= hunger_timer_max the pet seeks nearest food (organs group).
 # Resets to 0 on consumption (full eat or per-bite for multi-bite organs). Default 5s per spec.
 @export_group("Hunger")
-@export var hunger_timer_max: float = 5.0  # seconds until max hunger; pet seeks nearest food at/after this
+@export var hunger_timer_max: float = 7.5  # seconds until max hunger; pet seeks nearest food at/after this (increased 50% for goldfish)
 var hunger_timer: float = 0.0
 var _hunger_bar_bg: ColorRect
 var _hunger_bar_fill: ColorRect
 
 var _was_in_eat_range: bool = false  # for counting discrete collisions on enter
 
+# Hold-to-tend support (4x hunger rate when player holds LMB on this pet)
+var hunger_rate_multiplier: float = 1.0
+var _original_body_color: Color = Color(1.0, 0.65, 0.2)
+
 func _ready() -> void:
-	_body = get_node_or_null("Body")
+	_body = get_node_or_null("Sprite") as CanvasItem
 	if _body == null:
-		# Distinct multi-part primitive for Freaky Goldfish larva (gold starter).
-		# Body (gold) + tail fin (darker accent) + simple eye. Clearly different from generic or future species.
-		# All code shapes so we can iterate fast without sprites.
-		var body := ColorRect.new()
-		body.name = "Body"
-		body.size = Vector2(42, 28)
-		body.position = Vector2(-21, -14)
-		body.color = Color(0.95, 0.78, 0.35)  # warm uncanny gold
-		body.mouse_filter = Control.MOUSE_FILTER_IGNORE
-		add_child(body)
-		_body = body
+		# Use the newly added Goldfish_Stage_One_Idle sprite sequence (53 frames) for the base normal goldfish animation.
+		# This replaces the previous primitive ColorRect visuals. The animation provides the swimming/idle motion.
+		# Later evolution stages can swap to different sprite sets or add effects on top.
+		var sprite := AnimatedSprite2D.new()
+		sprite.name = "Sprite"
+		add_child(sprite)
 
-		# Tail fin (rotated accent for fish silhouette, goldfish "aggressive" look).
-		var tail := ColorRect.new()
-		tail.name = "Tail"
-		tail.size = Vector2(14, 18)
-		tail.position = Vector2(14, -9)  # attached to right of body
-		tail.rotation_degrees = 18
-		tail.color = Color(0.78, 0.55, 0.22)
-		tail.mouse_filter = Control.MOUSE_FILTER_IGNORE
-		body.add_child(tail)
+		var sprite_frames := SpriteFrames.new()
+		sprite_frames.add_animation("idle")
+		sprite_frames.set_animation_loop("idle", true)
+		sprite_frames.set_animation_speed("idle", 12.0)  # ~4.4s loop for 53 frames; smooth idle swim
 
-		# Simple eye accent (dark dot for expression, becomes more eldritch on growth).
-		var eye := ColorRect.new()
-		eye.name = "Eye"
-		eye.size = Vector2(6, 6)
-		eye.position = Vector2(8, 6)
-		eye.color = Color(0.15, 0.12, 0.18)
-		eye.mouse_filter = Control.MOUSE_FILTER_IGNORE
-		body.add_child(eye)
+		for i in range(1, 54):
+			var path := "res://assets/sprites/pets/starter/Goldfish_Stage_One_Idle/%04d.png" % i
+			var tex := load(path) as Texture2D
+			if tex:
+				sprite_frames.add_frame("idle", tex)
+
+		sprite.sprite_frames = sprite_frames
+		sprite.play("idle")
+
+		# Center the sprite on the pet origin using offset (frames are drawn from top-left by default)
+		if sprite.sprite_frames and sprite.sprite_frames.has_animation("idle"):
+			var frame_count: int = sprite.sprite_frames.get_frame_count("idle")
+			if frame_count > 0:
+				var first_tex: Texture2D = sprite.sprite_frames.get_frame_texture("idle", 0)
+				if first_tex:
+					var native_size = first_tex.get_size()
+					# Base centering for the frame (top-left origin)
+					sprite.offset = -native_size / 2.0
+
+					# Scale the goldfish to roughly 100x100 pixels (maintain aspect)
+					var target_size = 100.0
+					var sf = target_size / max(native_size.x, native_size.y)
+					sprite.scale = Vector2(sf, sf)
+
+					# Additional alignment in final pixels to center the fish art (not the whole frame) on the pet origin (0,0).
+					# This aligns the visual goldfish with the collision shape (InteractArea circle at (0,0)) and the hunger bar.
+					# The shift (120, -120) is based on the screenshot with collision debug: move sprite visual +120 X, -120 Y.
+					var alignment_final = Vector2(120, -120)
+					var alignment_in_texture = alignment_final / sf
+					sprite.offset += alignment_in_texture
+
+		_body = sprite
+		_original_body_color = Color(1, 1, 1)
 
 	_ensure_hunger_bar()
 
 	# Make the pet clickable for future "inspect" or direct feed UI
-	var area: Area2D = Area2D.new()
-	area.name = "InteractArea"
-	var shape: CollisionShape2D = CollisionShape2D.new()
-	shape.shape = CircleShape2D.new()
-	(shape.shape as CircleShape2D).radius = 30
-	area.add_child(shape)
-	add_child(area)
+	# Reuse existing InteractArea from scene if present (to avoid duplicates), otherwise create.
+	var area: Area2D = get_node_or_null("InteractArea")
+	if area == null:
+		area = Area2D.new()
+		area.name = "InteractArea"
+		add_child(area)
+
+	# Ensure a collision shape with appropriate radius for the ~100px fish.
+	var shape: CollisionShape2D = area.get_node_or_null("CollisionShape2D")
+	if shape == null:
+		shape = CollisionShape2D.new()
+		shape.name = "CollisionShape2D"
+		area.add_child(shape)
+	var circ := CircleShape2D.new()
+	circ.radius = 60  # sized for ~100px goldfish visual (covers the sprite + some margin for interaction)
+	shape.shape = circ
 
 	area.input_event.connect(_on_interact_area_input)
 	area.input_pickable = true
+
+	# Ensure hunger bar is positioned under the newly scaled sprite immediately
+	_update_hunger_bar()
 
 	_pick_new_wander_target()
 
@@ -99,31 +130,26 @@ func initialize(game_manager: Node, controller: Node = null) -> void:
 	_game_manager = game_manager
 	_controller = controller
 
-	# Goldfish larva (Freaky Goldfish gold starter) – aggressive, eager for its medium food.
-	# (Future species will branch here on species == GameEnums.PetSpecies.XXX.)
-	# Start with a biased hunger_timer so the larva feels driven (seeks sooner after spawn/hatch).
-	if current_stage == GameEnums.EvolutionStage.LARVAL:
-		if species == GameEnums.PetSpecies.FREAKY_GOLDFISH:
-			_seek_speed_multiplier = 1.4
-			swim_speed = max(swim_speed, 82.0)
-			hunger_timer = hunger_timer_max * 0.7  # eager/aggressive baseline
-		else:
-			_seek_speed_multiplier = 1.35
-			swim_speed = max(swim_speed, 78.0)
-			hunger_timer = hunger_timer_max * 0.65
+	# v1.6: The specimen starts as a normal, formed goldfish (not a hyper-eager larva fresh from an egg).
+	# Hunger bias is mild so it feels like an established fish in the tank that is ready to eat the exotic feed you order.
+	# Future species (normal minnow school, normal remora, etc.) will branch here.
+	if species == GameEnums.PetSpecies.FREAKY_GOLDFISH:
+		_seek_speed_multiplier = 1.15
+		swim_speed = max(swim_speed, 72.0)
+	else:
+		_seek_speed_multiplier = 1.1
+		swim_speed = max(swim_speed, 70.0)
 
-	# Individual starting offset so pets don't all sync on the 5s hunger cycle.
-	# Larval goldfish are driven (start part-way through the timer so they seek sooner after hatch).
-	hunger_timer = randf_range(0.6, hunger_timer_max * 0.55)
-	if current_stage == GameEnums.EvolutionStage.LARVAL:
-		hunger_timer = max(hunger_timer, hunger_timer_max * 0.65)
+	# Individual starting offset so multiple fish won't sync perfectly on the hunger cycle.
+	hunger_timer = randf_range(0.4, hunger_timer_max * 0.6)
 
 func _physics_process(delta: float) -> void:
 	if _game_manager == null:
 		return
 
 	# Update hunger timer - individual per pet. At/above max the pet will seek nearest food.
-	hunger_timer = min(hunger_timer_max, hunger_timer + delta)
+	# Player can hold LMB on the pet (Goldfish) to run this at 4x rate (faster seeking + eating).
+	hunger_timer = min(hunger_timer_max, hunger_timer + delta * hunger_rate_multiplier)
 
 	_wander_timer -= delta
 	if _wander_timer <= 0.0:
@@ -185,13 +211,15 @@ func _physics_process(delta: float) -> void:
 	if _controller and _controller.has_method("clamp_to_tank"):
 		global_position = _controller.clamp_to_tank(global_position)
 
-	# Gentle bobbing / idle animation on the visual (works with multi-part primitive)
+	# Gentle bobbing / idle animation on the visual
 	if _body:
 		var bob: float = sin(Time.get_ticks_msec() / 420.0) * 1.5
-		if _body is Sprite2D:
+		if _body is AnimatedSprite2D or _body is Sprite2D:
+			# Bob the pivot (0,0) + small Y bob. The fish visual is centered on the pivot via offset (including alignment shift).
+			# This keeps the visual goldfish aligned with the collision at pet origin (0,0) and hunger bar under it.
 			_body.position = Vector2(0, bob)
 		else:
-			_body.position = Vector2(-21, -14 + bob)  # adjusted for our goldfish body size/center
+			_body.position = Vector2(-21, -14 + bob)  # legacy primitive support
 
 	_update_hunger_bar()
 
@@ -211,8 +239,8 @@ func _ensure_hunger_bar() -> void:
 		return
 	var bg := ColorRect.new()
 	bg.name = "HungerBarBG"
-	bg.size = Vector2(38, 5)
-	bg.position = Vector2(-19, 16)  # tuned under larval goldfish body (body at y~-14 size 28 → bottom around +14)
+	bg.size = Vector2(70, 6)  # wider for ~100px goldfish
+	bg.position = Vector2(-34, 30)  # initial for ~100px fish centered at (0,0); will be adjusted in _update_hunger_bar based on bob + scale
 	bg.color = Color(0.10, 0.07, 0.05, 0.95)
 	bg.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(bg)
@@ -220,7 +248,7 @@ func _ensure_hunger_bar() -> void:
 
 	var fill := ColorRect.new()
 	fill.name = "HungerBarFill"
-	fill.size = Vector2(36, 3)
+	fill.size = Vector2(68, 4)
 	fill.position = Vector2(1, 1)
 	fill.color = Color(0.92, 0.62, 0.25)
 	fill.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -233,7 +261,42 @@ func _update_hunger_bar() -> void:
 	var t: float = 0.0
 	if hunger_timer_max > 0.0:
 		t = clampf(hunger_timer / hunger_timer_max, 0.0, 1.0)
-	_hunger_bar_fill.size.x = 36.0 * t
+
+	# Keep bar roughly under the (bobbing) visual
+	var bar_base_width := 68.0
+	if _body:
+		var body_h: float = 14.0
+		var body_bottom: float = _body.position.y + body_h + 2.0
+		if _body is ColorRect:
+			body_h = _body.size.y
+			body_bottom = _body.position.y + body_h + 2.0
+			bar_base_width = 36.0  # legacy small bar for primitive
+		elif _body is AnimatedSprite2D or _body is Sprite2D:
+			# Use current (scaled) frame size for accurate under-body placement
+			var tex_size := Vector2(40, 26)
+			if _body is AnimatedSprite2D and _body.sprite_frames != null:
+				var anim: String = "idle"
+				if _body.sprite_frames.has_animation(anim):
+					var fcount: int = _body.sprite_frames.get_frame_count(anim)
+					if fcount > 0:
+						var fidx: int = clampi(_body.frame, 0, fcount - 1)
+						var tex: Texture2D = _body.sprite_frames.get_frame_texture(anim, fidx)
+						if tex:
+							tex_size = tex.get_size()
+			# Account for the scale we applied to the sprite (so bar sits under the rendered ~100px fish)
+			var scaled_h = tex_size.y * _body.scale.y
+			body_bottom = _body.position.y + scaled_h / 2.0 + 4.0
+			bar_base_width = 68.0
+			# Center the bar under the sprite (sprite position is 0 + bob, visual centered via offset + alignment)
+			_hunger_bar_bg.position.x = -bar_base_width / 2.0
+
+		_hunger_bar_bg.position.y = max(14.0, body_bottom)
+
+	# Set proportional bar width (after positioning logic so we have the right base)
+	_hunger_bar_bg.size.x = bar_base_width
+	_hunger_bar_fill.size.x = (bar_base_width - 2.0) * t
+	_hunger_bar_fill.position.x = 1.0
+
 	# Subtle hungry shift (amber calm → warning red as hunger maxes)
 	if t >= 0.85:
 		_hunger_bar_fill.color = Color(0.85, 0.28, 0.22)
@@ -241,13 +304,6 @@ func _update_hunger_bar() -> void:
 		_hunger_bar_fill.color = Color(0.95, 0.72, 0.25)
 	else:
 		_hunger_bar_fill.color = Color(0.92, 0.62, 0.25)
-	# Keep bar roughly under the (bobbing) body for the primitive goldfish visual
-	if _body:
-		var body_h: float = 14.0
-		if _body is ColorRect:
-			body_h = _body.size.y
-		var body_bottom: float = _body.position.y + body_h + 2.0
-		_hunger_bar_bg.position.y = max(14.0, body_bottom)
 
 func _update_food_target() -> void:
 	var is_hungry: bool = hunger_timer >= hunger_timer_max
@@ -309,18 +365,19 @@ func _update_food_target() -> void:
 		_was_in_eat_range = false
 		return
 
-	# Find closest valid food (prefer STARTER packets for the opening demo)
+	# Find closest valid food.
+	# We now use the controller's get_valid_food_in_tank() so pets reliably detect
+	# ANY valid uneaten food that is inside the tank bounds (no more missed food due to
+	# group timing, bounce distance, or outdated Area2D fallback).
 	var closest: Node = null
 	var closest_dist: float = 9999.0
 
-	# Find candidates: prefer group (added by Organ), fallback to layer walk
-	var candidates: Array = get_tree().get_nodes_in_group("organs")
-	if candidates.is_empty() and _controller and _controller.has_node("Entities"):
-		var entities := _controller.get_node("Entities")
-		for child in entities.get_children():
-			if is_instance_valid(child) and child is Area2D and child.has_method("collect") and "type" in child:
-				if not _is_food_collected(child):
-					candidates.append(child)
+	var candidates: Array = []
+	if _controller and _controller.has_method("get_valid_food_in_tank"):
+		candidates = _controller.get_valid_food_in_tank()
+	if candidates.is_empty():
+		# Fallback to group for robustness (e.g. during init or if controller not ready)
+		candidates = get_tree().get_nodes_in_group("organs")
 
 	for food in candidates:
 		if _is_food_collected(food):
@@ -329,7 +386,7 @@ func _update_food_target() -> void:
 		var d: float = global_position.distance_to(f.global_position if f else global_position)
 		var pref_bonus := _get_food_preference_score(food)  # goldfish medium bias (minimal size hint preview)
 		var effective_d := d + pref_bonus
-		if effective_d < closest_dist and d < 320.0:
+		if effective_d < closest_dist:
 			closest_dist = effective_d
 			closest = food
 
@@ -384,8 +441,8 @@ func _eat_current_food() -> void:
 		}
 		_game_manager.register_pet_consumed_organ(pet_data, food_type)
 
-		# For the "float and click" mechanic we release the Biomatter (from the full eat) as a clickable glob
-		# so the player interacts with the new resource type. (Per-bite Insight is already globbed in Organ.)
+		# Biomatter is emitted ONLY when a food source is fully consumed (organ_finished path).
+		# Decay produces NO resources (only pollution). Insight is released per-bite in Organ.on_pet_bump().
 		if _controller and _controller.has_method("spawn_resource_glob"):
 			_controller.spawn_resource_glob(global_position + Vector2(0, 8), 1, GameEnums.ResourceType.ABYSSAL_BIOMATTER)
 
@@ -417,8 +474,13 @@ func _eat_current_food() -> void:
 func _on_interact_area_input(_viewport: Node, event: InputEvent, _shape_idx: int) -> void:
 	if event is InputEventMouseButton:
 		var mouse_event: InputEventMouseButton = event as InputEventMouseButton
-		if mouse_event.button_index == MOUSE_BUTTON_LEFT and mouse_event.pressed:
-			_on_pet_clicked()
+		if mouse_event.button_index == MOUSE_BUTTON_LEFT:
+			if mouse_event.pressed:
+				# Start sustained hold: this accelerates hunger_rate (4x) while LMB is held.
+				# This is the core "tend the goldfish" mechanic.
+				if _controller and _controller.has_method("start_hold_on"):
+					_controller.start_hold_on(self)
+				_on_pet_clicked()  # existing click-to-feed-held or debug still works (brief hold is harmless)
 
 func _on_pet_clicked() -> void:
 	# print("[Pet] ", pet_name, " clicked. Current stage: ", GameEnums.EvolutionStage.keys()[current_stage], ", Organs fed: ", organs_fed)  # cleared for resource debug focus
@@ -426,8 +488,7 @@ func _on_pet_clicked() -> void:
 	if _controller and _controller.has_method("try_feed_held_to_pet"):
 		_controller.try_feed_held_to_pet(self)
 	elif _game_manager != null and _game_manager.has_method("get_resource"):
-		# Debug fallback feed. In full vision the larva should primarily eat autonomously via collisions.
-		# This path is for testing growth/evolution visuals only during transition.
+		# Debug fallback feed. Primary path is autonomous collision eating (the fish works for you).
 		feed(1)
 
 ## Feed / grow this pet.
@@ -443,7 +504,7 @@ func feed(organ_count: int = 1, skip_consume_register: bool = false) -> void:
 	scale_factor = min(scale_factor, 2.2)
 	scale = Vector2(scale_factor, scale_factor)
 
-	# Change color slightly toward the uncanny (only for primitive rect fallback)
+	# Change color slightly toward the uncanny (only for primitive rect fallback; sprites use animation instead)
 	if _body is ColorRect and current_stage < GameEnums.EvolutionStage.ELDRITCH:
 		_body.color = _body.color.lerp(Color(0.5, 0.3, 0.6), 0.15)
 
@@ -488,7 +549,8 @@ func _evolve() -> void:
 	tween.tween_property(self, "scale", scale, 0.25)
 
 	# TODO: Swap sprite / play evolution VFX / trigger a madness-flavored popup
-	# TODO: Unlock new abilities or passive resource generation based on stage
+	# Mutation visuals: at each stage increase "weirdness" on the primitive (darker/wrong colors, scale up tail, add small extra rects for eyes or tendrils, etc.).
+	# The starting visual (in _ready) is deliberately a normal aquarium goldfish.
 
 	if _game_manager:
 		if _game_manager.has_method("add_resource"):
@@ -513,3 +575,26 @@ func die_from_pollution() -> void:
 		t.tween_callback(queue_free)
 	else:
 		queue_free()
+
+# Called by AquariumController when player holds/releases LMB on this pet.
+# mult = 4.0 while held (accelerates hunger_timer buildup → faster seeking/eating).
+# mult = 1.0 when released.
+func set_hold_multiplier(mult: float) -> void:
+	hunger_rate_multiplier = mult
+	_update_hold_visual()
+
+func _update_hold_visual() -> void:
+	if _body == null:
+		return
+	if _body is AnimatedSprite2D:
+		if hunger_rate_multiplier > 1.0:
+			# Brighter, more "agitated" look while being tended (tint the whole animation)
+			_body.modulate = Color(1.3, 1.15, 0.7)
+		else:
+			_body.modulate = Color(1, 1, 1)
+	elif _body is ColorRect:
+		if hunger_rate_multiplier > 1.0:
+			# Brighter, more "agitated" look while being tended
+			_body.color = _original_body_color.lerp(Color(1.0, 0.85, 0.4), 0.7)
+		else:
+			_body.color = _original_body_color

@@ -4,7 +4,7 @@
 
 [node name="Egg" type="Node2D"]
 script = ExtResource("1_egg")
-base_hatch_time = 30.0
+base_hatch_time = 8.0
 
 ; Visuals are 100% distinct primitives created in _build_primitives (golden/eldritch egg for the gold starter playloop).
 ; No sprites used for this iteration (scrapped per plan; multi-rect shell + inner for shape/tint/pulse).

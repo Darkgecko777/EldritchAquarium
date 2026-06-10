@@ -4,8 +4,8 @@
 **Status**: Living Document (Primary reference for Grok Imagine asset creation)
 
 ## Core Aesthetic
-**Style**: Retro comic book advertisement meets Sea Monkeys nostalgia, infused with playful eldritch horror.  
-**Influences**: Silver Age comics, vintage 1960s–70s mail-order catalogs, *Cuphead* (for bold stylization), *Spore* creature weirdness, and classic Sea Monkeys ads.
+**Style**: Retro comic book advertisement meets vintage mail-order aquarium supply / exotic fish food catalog, infused with playful eldritch horror.  
+**Influences**: Silver Age comics, vintage 1960s–70s mail-order catalogs and pet food ads, *Cuphead* (for bold stylization), *Spore* creature weirdness, and classic "add water and watch them grow" ads — now rethemed around feeding ordinary fish the unknown.
 
 **Key Visual Traits**:
 - Bold, clean black ink outlines
@@ -32,9 +32,9 @@
 ## Asset Categories & Priorities
 
 ### 1. Core Game Objects
-- Shipping containers (closed, landed, opening states) — retro sci-fi comic style with hazard labels
-- Organs (basic set + variations) — gooey, wobbly, cartoonish with tiny eyes/mouths for personality
-- Pets (multi-stage evolution lines) — starting with adorable comic Sea Monkey larvae
+- Shipping containers (closed, landed, opening states) — retro sci-fi comic style with hazard labels ("EXOTIC FEED - HANDLE WITH CARE")
+- Feed items / "organs" (basic set + variations) — gooey, wobbly, cartoonish "pellets", "supplements", "chunks" with tiny eyes/mouths for personality (the exotic food that drives change)
+- Specimens / Pets (multi-stage evolution lines) — starting with perfectly ordinary comic goldfish (or other normal aquarium pets). Early stages look cute/normal; later stages become grotesque through accumulated mutations.
 
 ### 2. Tank & Environment
 - Base tank background (layered water, bubbles, faint comic panel lines)
@@ -50,7 +50,7 @@
 - Speech bubbles and madness overlays
 
 ## Generation Guidelines (For Grok Imagine)
-- Always specify: "bold black ink outlines, halftone shading, retro comic book style, Sea Monkeys influence"
+- Always specify: "bold black ink outlines, halftone shading, retro comic book style, vintage mail-order aquarium feed catalog influence"
 - Include "game asset sprite sheet ready" or "isolated on transparent background" when needed
 - Request multiple angles/states where relevant (idle, eating, evolved)
 - Maintain consistency across evolution stages

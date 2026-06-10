@@ -82,38 +82,34 @@ The project has been converted from C# to GDScript. No more .csproj builds, no m
 - Enums are in `scripts/data/enums.gd` (use `GameEnums.ResourceType.ELDRITCH_INSIGHT` as the primary basic currency per v1.3 vision — **generated exclusively by pet collision-eating**; BIOMASS is legacy/bridge. Unique starter "incubation packets" for the first egg are distinct from normal organs. Make sure `enums.gd` has `class_name GameEnums`).
 - GDScript is hot-reload friendly and has lower friction for Godot-specific features (signals, tweens, etc.).
 
-When opening the project, assign the three PackedScene exports on the Aquarium root node (ShippingContainer.tscn, Organ.tscn, Pet.tscn) in the inspector if they are not set.
+When opening the project, assign the PackedScene exports on the Aquarium root node (ShippingContainer.tscn, Organ.tscn, Pet.tscn, and optionally the legacy Egg.tscn) in the inspector if they are not set. The egg path is no longer used for the standard initial loop.
 
 ### Running
 1. Open in Godot editor (any 4.6+ build is fine now — no .NET requirement).
 2. Press F5. Changes to .gd are picked up instantly.
 
-The visual style (all primitives) remains the same for now. The core loop, pet acquisition (universal via ad/title), egg hatch with food timer reduction, unique starter packets, and especially the strict "resources ONLY from pet collision eating with pet-specific yields" model are in active transition per v1.3 vision. See DESIGN_HISTORY and Game_Vision for details.
+The visual style (all primitives) remains the same for now. The core loop is now "comic feed catalog ad → tank with normal goldfish present → order exotic feed shipments → autonomous eating + player holds → mutations via consumption/evolution → death yields Fragments for prestige." No egg/hatch. Strict "resources ONLY from specimen collision eating" is the rule. See updated Game_Vision.md and DESIGN_HISTORY for the pivot.
 
-## Current Known Good State
+## Current Known Good State (Theme Pivot Applied)
 
-- Title screen is the main scene (will become / host the comic book ad/catalog page for *all* pet orders. For new runs it is the full "Sea Monkey kit" sales ad; for continuing games after first hatch it must dynamically switch to consistent catalog updates / "order more specimens" pages).
-- All visuals use only Godot primitives (ColorRect, CPUParticles2D nodes, StyleBoxFlat, etc.).
-- Start/Exit on title + Menu button in-game are functional.
-- Core systems partially migrated toward v1.3:
-  - order prefers Insight (with legacy fallback).
-  - ResourceDisplay shows "Insight".
-  - Some legacy direct grants still exist in code for playability during transition.
-- **Current implementation status (first few moments playable)**:
-  - Egg entity + drop + ~30s timer (reduced by food arrival from complimentary) + hatch fully working (scripts/entities/Egg.gd + .tscn).
-  - Title "ORDER SEA MONKEY KIT" (dynamic) triggers opening sequence via pending flag.
-  - Complimentary free shipment spawns the two unique STARTER_PRIMAL / STARTER_VOID packets (special visuals).
-  - Larva hatches as "Sea Monkey" (LARVAL, eager).
-  - Pet has working autonomous seek + 3-4 collision eating (only source of Insight via register_pet_consumed_organ + pet RNG chance for secondaries). Floating "MUNCH!" comic text.
-  - Dynamic title works (T key in tank after eat → back to title shows "ORDER MORE SPECIMENS" + catalog text).
-  - Legacy grants removed from economy paths.
-- Remaining gaps (later): full gating for more pets, multiple species with distinct yield tables, persistent saves for true "continuing run" title without reset, real comic panel art in title, more VFX.
-- **Strict rule now enforced in core path**: Insight only from pet collision consumption.
+- Title screen is the main scene and is the comic "exotic fish feed & supplements" catalog/ad for ordering mutation-inducing food. New runs use a fresh pitch; continuing runs show dynamic "re-stock" updates.
+- All visuals use only Godot primitives (plus a few real icons for resources). No egg or hatch visuals in the standard path.
+- Start/Exit on title + Menu (pause) button in-game are functional.
+- **No egg / no hatch for initial loop**: New runs start directly with a fully formed, visually normal goldfish specimen already in the tank. The core fantasy is ordering exotic feed to cause mutations in an ordinary fish.
+- Core systems in place for the loop:
+  - 6-slot bottom feed catalog (BASE free+20s CD, SILVER, GOLD with tiered quantity + rarity).
+  - Autonomous seek + collision eating (hunger_timer, bites_to_consume on feed items, register_pet_consumed_organ as the authoritative resource source via spawned globs).
+  - Clickable ResourceGlobs that fly collected value to the HUD.
+  - Feed items with size_category + 5 rarities, decay bar, size-scaled Pollution on rot.
+  - Dynamic title/catalog behavior.
+- **Playable initial loop (start to death/Fragments)**: Title ad click → Aquarium with normal goldfish present + catalog visible → Order feed (catalog clicks or SPACE) → Drops (including special starter sample feed for first run) → Goldfish autonomously eats (player clicks globs) → Consumption builds toward evolutions/mutations (scaffolded) → Pollution + health pressure → Death grants Fragments (via current threshold or improved HP path).
+- Strict "resources generated only via specimen collision-eating" is enforced in the main paths.
+- Legacy direct grants and old egg/opening code exist but are not part of the recommended initial loop flow.
 
-**Important for running the current build**:
-- The ResourceDisplay "Biomass" label has been repurposed to show "Insight: X" (primary currency).
-- To play the first moments: Launch → click "ORDER SEA MONKEY KIT" (or START) → watch egg drop & incubate (timer label + bar) → click the now "CLAIM COMPLIMENTARY..." button or SPACE → container drops with 2 unique colored starter packets → egg timer accelerates on food arrival → larva hatches → larva autonomously chases & collides 4x to eat (watch "MUNCH!" + Insight pop) → earn your first resources only via eating.
-- Press T in the tank (after some eats) to return to Title and see the dynamic "ORDER MORE SPECIMENS" + updated footer.
-- MENU button returns to title.
-- Right-click / legacy still around for debug but do not generate core Insight.
-- order_shipment costs Insight first (with Biomass fallback).
+**Important for running the current build (post-pivot)**:
+- The ResourceDisplay shows Insight (primary, from eating), Biomatter, Shards/Fragments, and Pollution.
+- To play the initial loop: Launch → Title comic feed catalog ("ORDER EXOTIC FEED" or similar) → enter tank. A normal goldfish is already present and swimming (no egg, no wait). Use SPACE or click the bottom catalog slots (BASE free with cooldown, SILVER/GOLD paid) to order exotic feed shipments. Food drops, goldfish autonomously seeks and collision-eats (bites required per piece), click the released globs to collect resources (they fly to HUD). Hold mechanics (when implemented) let you accelerate hunger on the fish or decay on uneaten food. Watch consumption drive evolution/mutation stages. Pollution builds; mismanagement leads to death and Fragments.
+- Press T in the tank to return to Title and see dynamic catalog updates.
+- MENU button pauses or returns to title.
+- Right-click is legacy/debug (adds Biomatter; does not generate core Insight).
+- order_shipment costs Insight first (with Biomatter fallback). Starter sample feed for the very first drop uses special visual types (reframed as "intro mutation primer" packets).

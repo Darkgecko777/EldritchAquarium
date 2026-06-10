@@ -3,14 +3,16 @@
 [ext_resource type="Script" path="res://scripts/entities/Pet.gd" id="1_pet"]
 
 [sub_resource type="CircleShape2D" id="CircleShape2D_1"]
-radius = 30.0
+radius = 60.0
 
 [node name="Pet" type="CharacterBody2D"]
 script = ExtResource("1_pet")
 
-; Body visual is 100% distinct primitives (multi-part goldfish shape: body + tail fin + eye) created in _ready.
-; No PNG sprites used in this iteration (scrapped to keep fast primitive iteration for the gold starter).
-; The script always authors the visual for clear differentiation from future species (Minnows/Remora) and generic rects.
+; Visual now uses the Goldfish_Stage_One_Idle sprite sequence (53 frames in assets/sprites/pets/starter/) for animation.
+; The script (in _ready) creates an AnimatedSprite2D named "Sprite", loads the frames, centers via offset (-size/2), scales to ~100px, adds alignment shift to offset (120, -120 in final px, converted to texture space via /sf) so the fish art (not frame) is centered on pet origin (0,0) which is the collision center (InteractArea radius 60) and logical position.
+; Bob sets position to (0, bob). Hunger bar positioned in update relative to _body.position + scaled height.
+; This aligns visual, collision debug, and hunger bar. Replaces previous primitives.
+; Evolution stages can later use different sprite sets or overlay effects. Hunger bar and hold tints (modulate) managed in script.
 
 [node name="InteractArea" type="Area2D" parent="."]
 

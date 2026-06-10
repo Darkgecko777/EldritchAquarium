@@ -13,7 +13,7 @@ var _collected: bool = false
 
 func _ready() -> void:
 	_build_visual()
-	_setup_click_area()
+	_setup_hover_area()
 	_drift = Vector2(randf_range(-12, 12), randf_range(-8, 8)).normalized() * randf_range(4, 10)
 
 func initialize(res_type: GameEnums.ResourceType, amt: int, icon_tex: Texture2D = null, controller: Node = null) -> void:
@@ -56,16 +56,18 @@ func _build_visual(icon_tex: Texture2D = null) -> void:
 		var pop := create_tween()
 		pop.tween_property(_visual, "scale", Vector2(1.0, 1.0), 0.22)
 
-func _setup_click_area() -> void:
+func _setup_hover_area() -> void:
+	# Hover area for collecting resources on mouse hover (instead of click).
+	# This makes collection more automatic and fluid while the player tends the tank.
 	_area = Area2D.new()
-	_area.name = "ClickArea"
+	_area.name = "HoverArea"
 	var shape := CollisionShape2D.new()
 	shape.shape = CircleShape2D.new()
-	(shape.shape as CircleShape2D).radius = 36
+	(shape.shape as CircleShape2D).radius = 48  # slightly larger for easier hover collection
 	_area.add_child(shape)
 	add_child(_area)
 	_area.input_pickable = true
-	_area.input_event.connect(_on_input_event)
+	_area.mouse_entered.connect(_on_mouse_entered)
 
 func _process(delta: float) -> void:
 	if _collected:
@@ -92,21 +94,18 @@ func _process(delta: float) -> void:
 	if _lifetime <= 0.0:
 		_auto_collect_on_timeout()
 
-func _on_input_event(_viewport: Node, event: InputEvent, _shape_idx: int) -> void:
+func _on_mouse_entered() -> void:
+	# Collect on hover (mouse enter) rather than requiring a click.
 	if _collected:
 		return
-	if event is InputEventMouseButton:
-		var mb := event as InputEventMouseButton
-		if mb.button_index == MOUSE_BUTTON_LEFT and mb.pressed:
-			_collect()
-			get_viewport().set_input_as_handled()
+	_collect()
 
 func _collect() -> void:
 	if _collected:
 		return
 	_collected = true
 
-	# Remove immediately on click (visual gone right away)
+	# Remove immediately on hover (visual gone right away)
 	if _visual:
 		_visual.visible = false
 
@@ -115,7 +114,7 @@ func _collect() -> void:
 	else:
 		queue_free()
 
-	# Free promptly – the flying UI effect is spawned independently from the click position
+	# Free promptly – the flying UI effect is spawned independently
 	queue_free()
 
 func _fade_and_free() -> void:
@@ -132,7 +131,7 @@ func apply_impulse(imp: Vector2) -> void:
 	_drift += imp * 0.6
 
 func _auto_collect_on_timeout() -> void:
-	# On timeout, auto-collect so the player doesn't lose the released resources (just no manual click bonus feel).
+	# On timeout, auto-collect so the player doesn't lose the released resources (just no hover bonus feel).
 	# Still plays the fly visual. Hide first for clean removal.
 	if _collected:
 		return

@@ -15,7 +15,7 @@ enum EvolutionStage {
 }
 
 enum PetSpecies {
-	FREAKY_GOLDFISH
+	FREAKY_GOLDFISH  # Starts as a perfectly normal aquarium goldfish. Mutations happen via consumption/evolution stages.
 }
 
 enum OrganType {
@@ -24,14 +24,14 @@ enum OrganType {
 	HEART,
 	SCALE,
 	NEURAL_CLUSTER,
-	STARTER_PRIMAL,
-	STARTER_VOID
+	STARTER_PRIMAL,  # Used for the complimentary first-run sample feed pack (visually distinct "exotic primer" food)
+	STARTER_VOID     # Second special sample packet. Reframed as mutation kickstart feed, not incubation packets.
 }
 
 enum OrganRarity {
-	COMMON,     # lowest rarity (used for goldfish starter shipment etc.)
-	UNCOMMON,
-	RARE,
-	MYTHIC,
-	ELDRITCH
+	COMMON,     # insight = 2
+	UNCOMMON,   # insight = 4
+	RARE,       # insight = 8
+	EPIC,       # insight = 16
+	LEGENDARY   # insight = 32
 }

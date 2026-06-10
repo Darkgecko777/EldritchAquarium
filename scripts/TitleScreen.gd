@@ -26,9 +26,9 @@ func _ready() -> void:
 	if void_particles:
 		void_particles.emitting = true
 
-	# v1.3+: Make title screen content dynamic based on run state.
-	# For brand new games: exotic "creatures never before seen by man or child!" pitch (Sea Monkeys aesthetic preserved).
-	# For continuing games (after first pet hatched): updated catalog / "order more" page.
+	# v1.6+: Title is the comic exotic fish feed / supplement catalog ad.
+	# For brand new runs: "order the good stuff" pitch that will mutate your ordinary goldfish.
+	# For continuing games (after first death/fragments): dynamic "re-stock the tank" catalog updates.
 	_apply_dynamic_ad_content()
 
 	# print("[TitleScreen] Ready. All visuals are Godot primitives only.")  # cleared for resource debug focus
@@ -131,36 +131,33 @@ func _play_start_transition() -> void:
 		flash.queue_free()
 
 func _apply_dynamic_ad_content() -> void:
-	# Check GameManager for whether we've already hatched the first pet in this run (or a loaded save).
+	# Check GameManager for run state (first death/fragments collected or equivalent).
 	var gm := get_node_or_null("/root/GameManager")
 	var is_continuing := false
 	if gm != null and "first_pet_hatched" in gm:
 		is_continuing = gm.first_pet_hatched
 
 	if not is_continuing:
-		# Fresh run / first pet not yet hatched → exotic "creatures never before seen" ad (gold starter playloop).
-		# Keeps Sea Monkeys visual/portal aesthetic and uncanny mercantile tone.
-		# print("[TitleScreen] Fresh run mode: exotic creatures comic ad pitch (gold starter).")  # cleared for resource debug focus
-		# Could swap in more sales-y subtitle or button text here when we have comic styling.
+		# Fresh run: comic catalog ad pitch for exotic feed that will mutate the ordinary goldfish already in your tank.
+		# No egg, no "creatures for sale" — you are buying the strange food.
+		# print("[TitleScreen] Fresh run: exotic feed catalog ad (normal goldfish will mutate).")
 		if start_button:
-			start_button.text = "EXOTIC CREATURES (NEW!)"
+			start_button.text = "ORDER EXOTIC FEED"
 		return
 
-	# Continuing run → dynamically changed catalog / re-order page. Keep the same visual style (gold starter now active).
-		# print("[TitleScreen] Continuing run: updated catalog / 'order more specimens' ad content.")  # cleared for resource debug focus
+	# Continuing run → dynamic catalog / "re-stock with stronger blends" page.
+	# print("[TitleScreen] Continuing run: updated feed catalog / 'order more of the good stuff'.")
 	if start_button:
-		start_button.text = "ORDER MORE SPECIMENS"
+		start_button.text = "ORDER MORE FEED"
 	if title_label_2:
-		# Slight flavor shift without breaking the logo.
-		pass  # Could modulate or we could have a separate "catalog header" label later.
-	# Update footer + subtitle to feel like a catalog update / ongoing ad.
+		pass
 	var footer := get_node_or_null("Footer") as Label
 	if footer:
-		footer.text = "Your tank has proven viable. New exotic imports now available."
+		footer.text = "Your specimens have proven... receptive. Stronger blends now available."
 	var subtitle := get_node_or_null("LogoContainer/Subtitle") as Label
 	if subtitle:
-		subtitle.text = "Replenish. Expand. Witness the unknowable."
-	# Could add a small "current collection" comic panel summary here in future.
+		subtitle.text = "Feed. Mutate. Transcend."
+	# Future: small current-specimen comic summary panels.
 
 func _on_exit_pressed() -> void:
 	exit_button.disabled = true

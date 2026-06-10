@@ -2,7 +2,7 @@
 
 [ext_resource type="Script" path="res://scripts/AquariumController.gd" id="1_controller"]
 [ext_resource type="Script" path="res://scripts/ui/ResourceDisplay.gd" id="2_resourcedisplay"]
-[ext_resource type="PackedScene" uid="uid://egg_first" path="res://scenes/entities/Egg.tscn" id="3_egg"]
+[ext_resource type="PackedScene" uid="uid://egg_first" path="res://scenes/entities/Egg.tscn" id="3_egg"]  ; legacy (no longer instantiated for the standard initial loop — normal goldfish spawns directly)
 [ext_resource type="Texture2D" path="res://assets/sprites/icons/eldritch_insight_icon.png" id="4_insight_icon"]
 [ext_resource type="PackedScene" path="res://scenes/entities/ResourceGlob.tscn" id="5_glob"]
 [ext_resource type="Texture2D" path="res://assets/sprites/icons/abyssal_biomass_icon.png" id="6_biomass_icon"]

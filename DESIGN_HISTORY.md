@@ -10,6 +10,33 @@ This complements:
 
 Keep entries **brief**. Focus on *why*, major choices, and what was working at the time. Date + short title.
 
+## 2026-06 (Pivot): No Egg / Normal Goldfish Start + Exotic Feed Mutation Theme (Initial Loop Focus)
+**What was added/changed**:
+- Major theme pivot: Game is now about ordering **exotic pet food / mutation-inducing supplements** through comic ads, not acquiring exotic pets. All specimens (starting with Goldfish) begin as **perfectly normal, ordinary aquarium pets**. They mutate and become eldritch horrors as they consume the feed across evolution stages.
+- Removed egg, hatch timer, incubation, "Sea Monkey kit", and larval start from the initial loop. New runs now start with a **fully formed normal goldfish already present** in the tank the moment you enter from the title/catalog ad.
+- Rethemed language across docs and code: "shipments" → exotic feed orders, "organs" often called feed/pellets/supplements/chunks in prose, "pets" often "specimens" in high-level descriptions. Starter packets reframed as complimentary "sample mutation primer" feed for the first run.
+- Updated Game_Vision.md (to 1.6), Readme.md, Shop.md (to 1.3), Art_Direction.md, SCAFFOLDING_NOTES.md, and this history. TitleScreen ad pitch, button text, and dynamic content shifted to feed catalog. AquariumController simplified (egg path bypassed for standard new runs; direct normal goldfish spawn + rethemed intro comic).
+- Initial loop emphasis: Title (comic feed ad) → Tank with normal goldfish + bottom catalog → Order feed → Autonomous collision eating + globs → Consumption drives mutations/evolutions → Pollution/HP pressure → Death yields stage-scaled Fragments → (future) prestige reset to fresh normal specimen.
+
+**Rationale**: Egg/hatch created a wait that distanced the player from the mutation fantasy. Starting with a normal, active goldfish + immediate ability to order feed makes "watch ordinary become extraordinary" immediate and visceral. The comic catalog aesthetic remains core (now as a shady exotic fish food supplier). This tightens the "game start to first prestige reset" loop for focused iteration.
+
+**State at end of work**:
+- Docs fully reflect the change. Code has the no-egg direct spawn path as the primary flow (old egg/ opening code remains but is not exercised for new runs). First food drop can still use the special STARTER_* types for visual distinction (now "sample feed").
+- Playable: Ad click → normal goldfish in tank → order food via catalog/SPACE → eating + resource globs work → death path (pollution threshold) grants Fragments.
+- Next immediate for loop completeness: Hold interactions, real HP + varied death, visible stage mutations on the goldfish primitive, eat-path pollution, and wiring a simple prestige/reset that returns you to a fresh normal goldfish.
+
+**References**:
+- Direct user request in this session to shift theme and remove egg for better iteration on the initial loop.
+- Aligns with prior autonomous + comic ad foundation while dropping the Sea Monkeys egg acquisition model.
+
+**Rationale**: Stronger player agency to "drive the mechanics" while keeping the autonomous collision-eating economy as the core engine. Remora becomes a high-skill, high-attention Pollution processor with clear risk (self-damage on empty tank) instead of a passive meter. Stage-scaled shards + multipliers tighten the early loop and make evolution feel immediately rewarding for prestige progress. HP opens future design space for hostile inter-pet interactions.
+
+**State**: Vision documents now fully reflect the 8 requested adjustments. No Overburden language remains in active descriptions. Ready for implementation phase (hold input handling, HP tracking + depletion, accelerated timers on Pet/Organ/Spawner, pollution math on eat path, evolution multiplier application in register_pet_consumed_organ, Remora stress logic, Minnow spawner entity, shard scaling on death).
+
+**References**:
+- Direct user request in session (the numbered 1-8 points).
+- Aligns with prior autonomous + collision-eating foundation (Pet.gd hunger_timer + InteractArea, Organ size_category + decay bar + _decay_and_rot, GameManager register_pet_consumed_organ).
+
 ## 2026-06-08: Starter Trio + Consumption Loop Lock
 **What was added/changed**:
 - Locked 3 starters with full 5-stage/2-choice evolutions (Goldfish, Minnows, Remora with Overburden).
@@ -195,5 +222,7 @@ Keep entries **brief**. Focus on *why*, major choices, and what was working at t
 ---
 
 **Maintenance**: Append new sections at the top (reverse chrono) when a session produces meaningful design or scope decisions. Update the "Current Known Good State" summary in SCAFFOLDING_NOTES.md when the playable bar moves significantly.
+
+This entry (2026-06 pivot) locks the "normal goldfish + exotic feed drives mutations, no egg" direction for all subsequent work on the initial loop to first prestige.
 
 This file should stay short — aim for 1-2 screens of text even after many sessions. Detailed design lives in Game_Vision.md; implementation notes in SCAFFOLDING_NOTES.md.

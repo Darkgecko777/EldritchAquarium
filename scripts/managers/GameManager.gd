@@ -11,8 +11,8 @@ var _resources: Dictionary = {}
 var total_shipments_ordered: int = 0
 var total_organs_collected: int = 0
 
-var first_pet_hatched: bool = false
-var pending_opening_sequence: bool = false
+var first_pet_hatched: bool = false  # repurposed for "run has begun" (first eat or feed ordered) to drive dynamic title/catalog. Not egg/hatch related.
+var pending_opening_sequence: bool = false  # legacy from egg era; new initial loop (normal goldfish start) bypasses this. Kept to avoid breaking old paths during transition.
 
 func _ready() -> void:
 	_initialize_resources()
@@ -93,7 +93,7 @@ func start_new_run() -> void:
 
 	print("[DEBUG] New run reset - Insight: %d, Biomatter: %d, Shards: %d" % [_resources.get(GameEnums.ResourceType.ELDRITCH_INSIGHT, 0), _resources.get(GameEnums.ResourceType.ABYSSAL_BIOMATTER, 0), _resources.get(GameEnums.ResourceType.FORGOTTEN_MNEMONIC_SHARDS, 0)])
 	first_pet_hatched = false
-	pending_opening_sequence = true
+	pending_opening_sequence = false  # New flow (v1.6): no egg. Aquarium will spawn a fully formed normal goldfish directly. Title ad is the feed catalog.
 
 func register_organ_collected(organ_type: GameEnums.OrganType) -> void:
 	total_organs_collected += 1
@@ -110,6 +110,7 @@ func trigger_madness_event(description: String) -> void:
 	pass
 
 func mark_first_pet_hatched() -> void:
+	# Called on first successful eat or equivalent to flip title to "continuing catalog" mode.
 	first_pet_hatched = true
 
 func prestige() -> void:

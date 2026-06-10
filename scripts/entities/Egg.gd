@@ -1,8 +1,8 @@
 extends Node2D
 
-@export var base_hatch_time: float = 30.0
+@export var base_hatch_time: float = 8.0
 
-var _remaining_time: float = 30.0
+var _remaining_time: float = 8.0
 var _aquarium_controller: Node
 var _hatched: bool = false
 
