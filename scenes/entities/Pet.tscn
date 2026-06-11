@@ -1,42 +1,35 @@
 [gd_scene format=3 uid="uid://d0awi17ymastu"]
 
 [ext_resource type="Script" uid="uid://rqmj57uh7bmb" path="res://scripts/entities/Pet.gd" id="1_pet"]
+[ext_resource type="SpriteFrames" uid="uid://gblvwleu0eyw" path="res://assets/sprite_frames/goldfish_stage_one_idle.tres" id="2_d22tu"]
 
 [sub_resource type="CircleShape2D" id="CircleShape2D_Interact"]
 radius = 60.0
 
-[node name="Pet" type="CharacterBody2D"]
+[node name="Pet" type="CharacterBody2D" unique_id=1801901413]
 script = ExtResource("1_pet")
 
-; === EDITOR-PLACED VISUAL (populated/configured at runtime from asset frames for the starter goldfish) ===
-; Do not create this node in code. Scripts configure animation, offset, scale, and bob on this existing node.
-[node name="Sprite" type="AnimatedSprite2D" parent="."]
+[node name="Sprite" type="AnimatedSprite2D" parent="." unique_id=619324746]
+sprite_frames = ExtResource("2_d22tu")
 
-; === INTERACTION (editor structure; radius tuned for ~100px fish visual) ===
-[node name="InteractArea" type="Area2D" parent="."]
+[node name="InteractArea" type="Area2D" parent="." unique_id=1945781614]
 
-[node name="CollisionShape2D" type="CollisionShape2D" parent="InteractArea"]
+[node name="CollisionShape2D" type="CollisionShape2D" parent="InteractArea" unique_id=1210987909]
 shape = SubResource("CircleShape2D_Interact")
 
-; === HUNGER BAR (editor-placed holders; script positions, sizes, and colors the fill) ===
-; Prefer editor nodes over runtime creation for primary entity visuals and affordances.
-; Serialized using the exact style that works for other manually-positioned ColorRects
-; directly under Node2D/CharacterBody2D in this project (see Aquarium backgrounds).
-; The child uses layout_mode=0 so Godot knows its rect is manually defined relative to
-; its ColorRect parent (prevents parse errors when opening the .tscn in the editor).
-[node name="HungerBarBG" type="ColorRect" parent="."]
-offset_left = -34.0
-offset_top = 30.0
-offset_right = 36.0
-offset_bottom = 36.0
-color = Color(0.10, 0.07, 0.05, 0.95)
+[node name="HungerBarBG" type="ColorRect" parent="." unique_id=1133296286]
+offset_left = -33.0
+offset_top = 62.0
+offset_right = 37.0
+offset_bottom = 68.0
 mouse_filter = 2
+color = Color(0.1, 0.07, 0.05, 0.95)
 
-[node name="HungerBarFill" type="ColorRect" parent="HungerBarBG"]
+[node name="HungerBarFill" type="ColorRect" parent="HungerBarBG" unique_id=867376129]
 layout_mode = 0
 offset_left = 1.0
 offset_top = 1.0
 offset_right = 69.0
 offset_bottom = 5.0
-color = Color(0.92, 0.62, 0.25)
 mouse_filter = 2
+color = Color(0.92, 0.62, 0.25, 1)

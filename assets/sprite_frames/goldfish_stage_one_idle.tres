@@ -1,0 +1,222 @@
+[gd_resource type="SpriteFrames" format=3 uid="uid://gblvwleu0eyw"]
+
+[ext_resource type="Texture2D" uid="uid://085a8v6m5cle" path="res://assets/sprites/pets/starter/Goldfish_Stage_One_Idle/0001.png" id="1_uu4la"]
+[ext_resource type="Texture2D" uid="uid://dko5axf54xbt5" path="res://assets/sprites/pets/starter/Goldfish_Stage_One_Idle/0002.png" id="2_1mfts"]
+[ext_resource type="Texture2D" uid="uid://e8842mv1u4b2" path="res://assets/sprites/pets/starter/Goldfish_Stage_One_Idle/0003.png" id="3_2033w"]
+[ext_resource type="Texture2D" uid="uid://cu0idrymo8mtl" path="res://assets/sprites/pets/starter/Goldfish_Stage_One_Idle/0004.png" id="4_foxam"]
+[ext_resource type="Texture2D" uid="uid://dibmpnubc7a1v" path="res://assets/sprites/pets/starter/Goldfish_Stage_One_Idle/0005.png" id="5_eijpt"]
+[ext_resource type="Texture2D" uid="uid://btv676mjd7d2s" path="res://assets/sprites/pets/starter/Goldfish_Stage_One_Idle/0006.png" id="6_158k3"]
+[ext_resource type="Texture2D" uid="uid://drpuwgbd43fo4" path="res://assets/sprites/pets/starter/Goldfish_Stage_One_Idle/0007.png" id="7_3rg4y"]
+[ext_resource type="Texture2D" uid="uid://u50vsv5oyr71" path="res://assets/sprites/pets/starter/Goldfish_Stage_One_Idle/0008.png" id="8_1ulhl"]
+[ext_resource type="Texture2D" uid="uid://diaqcw6ltrpqm" path="res://assets/sprites/pets/starter/Goldfish_Stage_One_Idle/0009.png" id="9_nnh04"]
+[ext_resource type="Texture2D" uid="uid://csdmgu7mt1j1w" path="res://assets/sprites/pets/starter/Goldfish_Stage_One_Idle/0010.png" id="10_0mkul"]
+[ext_resource type="Texture2D" uid="uid://cjy4k12ic416u" path="res://assets/sprites/pets/starter/Goldfish_Stage_One_Idle/0011.png" id="11_g6be6"]
+[ext_resource type="Texture2D" uid="uid://dwqflsgy2c3we" path="res://assets/sprites/pets/starter/Goldfish_Stage_One_Idle/0012.png" id="12_wr3vj"]
+[ext_resource type="Texture2D" uid="uid://bv6jjtbdv3l7f" path="res://assets/sprites/pets/starter/Goldfish_Stage_One_Idle/0013.png" id="13_8lcxh"]
+[ext_resource type="Texture2D" uid="uid://crn3euw276qml" path="res://assets/sprites/pets/starter/Goldfish_Stage_One_Idle/0014.png" id="14_2vop4"]
+[ext_resource type="Texture2D" uid="uid://ygd41bbqwdcr" path="res://assets/sprites/pets/starter/Goldfish_Stage_One_Idle/0015.png" id="15_fkh1c"]
+[ext_resource type="Texture2D" uid="uid://kkig2pb7kc6b" path="res://assets/sprites/pets/starter/Goldfish_Stage_One_Idle/0016.png" id="16_g6uhx"]
+[ext_resource type="Texture2D" uid="uid://bwauvjg443r8f" path="res://assets/sprites/pets/starter/Goldfish_Stage_One_Idle/0017.png" id="17_tc2st"]
+[ext_resource type="Texture2D" uid="uid://exn6sajgkcbo" path="res://assets/sprites/pets/starter/Goldfish_Stage_One_Idle/0018.png" id="18_j2bn2"]
+[ext_resource type="Texture2D" uid="uid://dbwpfrskftk8m" path="res://assets/sprites/pets/starter/Goldfish_Stage_One_Idle/0019.png" id="19_lfh47"]
+[ext_resource type="Texture2D" uid="uid://cut60fr6wrnt3" path="res://assets/sprites/pets/starter/Goldfish_Stage_One_Idle/0020.png" id="20_j22rk"]
+[ext_resource type="Texture2D" uid="uid://cb3g1qlewmvs5" path="res://assets/sprites/pets/starter/Goldfish_Stage_One_Idle/0021.png" id="21_3f54w"]
+[ext_resource type="Texture2D" uid="uid://bm2vhqusn77cq" path="res://assets/sprites/pets/starter/Goldfish_Stage_One_Idle/0022.png" id="22_v3wld"]
+[ext_resource type="Texture2D" uid="uid://dcgoyqt4rcjhr" path="res://assets/sprites/pets/starter/Goldfish_Stage_One_Idle/0023.png" id="23_arhfq"]
+[ext_resource type="Texture2D" uid="uid://dkg4gmon1prig" path="res://assets/sprites/pets/starter/Goldfish_Stage_One_Idle/0024.png" id="24_1se8b"]
+[ext_resource type="Texture2D" uid="uid://cfemdqh7pph7x" path="res://assets/sprites/pets/starter/Goldfish_Stage_One_Idle/0025.png" id="25_thwqd"]
+[ext_resource type="Texture2D" uid="uid://dcw6nogwd068f" path="res://assets/sprites/pets/starter/Goldfish_Stage_One_Idle/0026.png" id="26_f1a2m"]
+[ext_resource type="Texture2D" uid="uid://08tswu1t2yv3" path="res://assets/sprites/pets/starter/Goldfish_Stage_One_Idle/0027.png" id="27_rom32"]
+[ext_resource type="Texture2D" uid="uid://80pw5wsedhhu" path="res://assets/sprites/pets/starter/Goldfish_Stage_One_Idle/0028.png" id="28_j3i1m"]
+[ext_resource type="Texture2D" uid="uid://f5xfl76rlvo7" path="res://assets/sprites/pets/starter/Goldfish_Stage_One_Idle/0029.png" id="29_y1v4w"]
+[ext_resource type="Texture2D" uid="uid://ckkk0tpqdjaee" path="res://assets/sprites/pets/starter/Goldfish_Stage_One_Idle/0030.png" id="30_c1bft"]
+[ext_resource type="Texture2D" uid="uid://chamfsxjrfn36" path="res://assets/sprites/pets/starter/Goldfish_Stage_One_Idle/0031.png" id="31_3cbyi"]
+[ext_resource type="Texture2D" uid="uid://dysxpj0o77urm" path="res://assets/sprites/pets/starter/Goldfish_Stage_One_Idle/0032.png" id="32_o00my"]
+[ext_resource type="Texture2D" uid="uid://es3y0ohfevvi" path="res://assets/sprites/pets/starter/Goldfish_Stage_One_Idle/0033.png" id="33_oaic3"]
+[ext_resource type="Texture2D" uid="uid://bfligi664167y" path="res://assets/sprites/pets/starter/Goldfish_Stage_One_Idle/0034.png" id="34_lumgg"]
+[ext_resource type="Texture2D" uid="uid://cxj8cpy0ay1hv" path="res://assets/sprites/pets/starter/Goldfish_Stage_One_Idle/0035.png" id="35_i04cn"]
+[ext_resource type="Texture2D" uid="uid://djjiugftpm14i" path="res://assets/sprites/pets/starter/Goldfish_Stage_One_Idle/0036.png" id="36_grviy"]
+[ext_resource type="Texture2D" uid="uid://bwos50ar106nn" path="res://assets/sprites/pets/starter/Goldfish_Stage_One_Idle/0037.png" id="37_t7c7o"]
+[ext_resource type="Texture2D" uid="uid://b85qmdilp5nsk" path="res://assets/sprites/pets/starter/Goldfish_Stage_One_Idle/0038.png" id="38_rnd13"]
+[ext_resource type="Texture2D" uid="uid://8eaw2pjwxdh6" path="res://assets/sprites/pets/starter/Goldfish_Stage_One_Idle/0039.png" id="39_7h26i"]
+[ext_resource type="Texture2D" uid="uid://ufmkmelt8hbb" path="res://assets/sprites/pets/starter/Goldfish_Stage_One_Idle/0040.png" id="40_tew8j"]
+[ext_resource type="Texture2D" uid="uid://b5v8knhq1ny5" path="res://assets/sprites/pets/starter/Goldfish_Stage_One_Idle/0041.png" id="41_r5mwo"]
+[ext_resource type="Texture2D" uid="uid://wn8tcxmpf3px" path="res://assets/sprites/pets/starter/Goldfish_Stage_One_Idle/0042.png" id="42_icr35"]
+[ext_resource type="Texture2D" uid="uid://bk7c4sm0l0wmo" path="res://assets/sprites/pets/starter/Goldfish_Stage_One_Idle/0043.png" id="43_a5kxe"]
+[ext_resource type="Texture2D" uid="uid://wpi4xo7ldvd6" path="res://assets/sprites/pets/starter/Goldfish_Stage_One_Idle/0044.png" id="44_5skgr"]
+[ext_resource type="Texture2D" uid="uid://b6gntj2ecpif4" path="res://assets/sprites/pets/starter/Goldfish_Stage_One_Idle/0045.png" id="45_w41b6"]
+[ext_resource type="Texture2D" uid="uid://dnemwawdy5x7s" path="res://assets/sprites/pets/starter/Goldfish_Stage_One_Idle/0046.png" id="46_3rw6t"]
+[ext_resource type="Texture2D" uid="uid://cr7eieoc46x84" path="res://assets/sprites/pets/starter/Goldfish_Stage_One_Idle/0047.png" id="47_740lf"]
+[ext_resource type="Texture2D" uid="uid://bg2ybs5sr802v" path="res://assets/sprites/pets/starter/Goldfish_Stage_One_Idle/0048.png" id="48_exm3b"]
+[ext_resource type="Texture2D" uid="uid://cfmv8ahi3w0y0" path="res://assets/sprites/pets/starter/Goldfish_Stage_One_Idle/0049.png" id="49_fpcf7"]
+[ext_resource type="Texture2D" uid="uid://s27x3amv7jkk" path="res://assets/sprites/pets/starter/Goldfish_Stage_One_Idle/0050.png" id="50_dr4dm"]
+[ext_resource type="Texture2D" uid="uid://bssnb76vkedvg" path="res://assets/sprites/pets/starter/Goldfish_Stage_One_Idle/0051.png" id="51_wa8m5"]
+[ext_resource type="Texture2D" uid="uid://djlxrx5847fpy" path="res://assets/sprites/pets/starter/Goldfish_Stage_One_Idle/0052.png" id="52_276us"]
+[ext_resource type="Texture2D" uid="uid://dqnaxnfulwibh" path="res://assets/sprites/pets/starter/Goldfish_Stage_One_Idle/0053.png" id="53_p4w4g"]
+
+[resource]
+animations = [{
+"frames": [{
+"duration": 1.0,
+"texture": ExtResource("1_uu4la")
+}, {
+"duration": 1.0,
+"texture": ExtResource("2_1mfts")
+}, {
+"duration": 1.0,
+"texture": ExtResource("3_2033w")
+}, {
+"duration": 1.0,
+"texture": ExtResource("4_foxam")
+}, {
+"duration": 1.0,
+"texture": ExtResource("5_eijpt")
+}, {
+"duration": 1.0,
+"texture": ExtResource("6_158k3")
+}, {
+"duration": 1.0,
+"texture": ExtResource("7_3rg4y")
+}, {
+"duration": 1.0,
+"texture": ExtResource("8_1ulhl")
+}, {
+"duration": 1.0,
+"texture": ExtResource("9_nnh04")
+}, {
+"duration": 1.0,
+"texture": ExtResource("10_0mkul")
+}, {
+"duration": 1.0,
+"texture": ExtResource("11_g6be6")
+}, {
+"duration": 1.0,
+"texture": ExtResource("12_wr3vj")
+}, {
+"duration": 1.0,
+"texture": ExtResource("13_8lcxh")
+}, {
+"duration": 1.0,
+"texture": ExtResource("14_2vop4")
+}, {
+"duration": 1.0,
+"texture": ExtResource("15_fkh1c")
+}, {
+"duration": 1.0,
+"texture": ExtResource("16_g6uhx")
+}, {
+"duration": 1.0,
+"texture": ExtResource("17_tc2st")
+}, {
+"duration": 1.0,
+"texture": ExtResource("18_j2bn2")
+}, {
+"duration": 1.0,
+"texture": ExtResource("19_lfh47")
+}, {
+"duration": 1.0,
+"texture": ExtResource("20_j22rk")
+}, {
+"duration": 1.0,
+"texture": ExtResource("21_3f54w")
+}, {
+"duration": 1.0,
+"texture": ExtResource("22_v3wld")
+}, {
+"duration": 1.0,
+"texture": ExtResource("23_arhfq")
+}, {
+"duration": 1.0,
+"texture": ExtResource("24_1se8b")
+}, {
+"duration": 1.0,
+"texture": ExtResource("25_thwqd")
+}, {
+"duration": 1.0,
+"texture": ExtResource("26_f1a2m")
+}, {
+"duration": 1.0,
+"texture": ExtResource("27_rom32")
+}, {
+"duration": 1.0,
+"texture": ExtResource("28_j3i1m")
+}, {
+"duration": 1.0,
+"texture": ExtResource("29_y1v4w")
+}, {
+"duration": 1.0,
+"texture": ExtResource("30_c1bft")
+}, {
+"duration": 1.0,
+"texture": ExtResource("31_3cbyi")
+}, {
+"duration": 1.0,
+"texture": ExtResource("32_o00my")
+}, {
+"duration": 1.0,
+"texture": ExtResource("33_oaic3")
+}, {
+"duration": 1.0,
+"texture": ExtResource("34_lumgg")
+}, {
+"duration": 1.0,
+"texture": ExtResource("35_i04cn")
+}, {
+"duration": 1.0,
+"texture": ExtResource("36_grviy")
+}, {
+"duration": 1.0,
+"texture": ExtResource("37_t7c7o")
+}, {
+"duration": 1.0,
+"texture": ExtResource("38_rnd13")
+}, {
+"duration": 1.0,
+"texture": ExtResource("39_7h26i")
+}, {
+"duration": 1.0,
+"texture": ExtResource("40_tew8j")
+}, {
+"duration": 1.0,
+"texture": ExtResource("41_r5mwo")
+}, {
+"duration": 1.0,
+"texture": ExtResource("42_icr35")
+}, {
+"duration": 1.0,
+"texture": ExtResource("43_a5kxe")
+}, {
+"duration": 1.0,
+"texture": ExtResource("44_5skgr")
+}, {
+"duration": 1.0,
+"texture": ExtResource("45_w41b6")
+}, {
+"duration": 1.0,
+"texture": ExtResource("46_3rw6t")
+}, {
+"duration": 1.0,
+"texture": ExtResource("47_740lf")
+}, {
+"duration": 1.0,
+"texture": ExtResource("48_exm3b")
+}, {
+"duration": 1.0,
+"texture": ExtResource("49_fpcf7")
+}, {
+"duration": 1.0,
+"texture": ExtResource("50_dr4dm")
+}, {
+"duration": 1.0,
+"texture": ExtResource("51_wa8m5")
+}, {
+"duration": 1.0,
+"texture": ExtResource("52_276us")
+}, {
+"duration": 1.0,
+"texture": ExtResource("53_p4w4g")
+}],
+"loop": true,
+"name": &"default",
+"speed": 15.0
+}]
